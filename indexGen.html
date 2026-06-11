@@ -46,11 +46,14 @@
 		class GUI{
 			#canvas
 			#ctx;
+			#seedLogPanel;
+			#seedHistory = [];
 
 			constructor() {
 				document.addEventListener('DOMContentLoaded', () =>{
 					document.getElementById('mapGen').addEventListener('click', ()=>this.#initMapTest() )
 					this.#initCanvas();
+					this.#initSeedLog();
 					this.#initMapTest();
 				});
 			}
@@ -65,13 +68,28 @@
 				canvas.height = 700;
 			}
 
+			#initSeedLog() {
+				const logPanel = this.#seedLogPanel = document.createElement("div");
+				logPanel.id = "seed-log-panel";
+
+				// Styling for a small, 3-line visible, copyable log widget
+				logPanel.style.cssText = `
+                position: fixed; bottom: 10px; left: 10px; width: 220px; height: 58px;
+                background: rgba(30, 30, 35, 0.85); color: #0cf; font-family: 'Courier New', monospace;
+                font-size: 11px; padding: 6px 10px; border-radius: 4px; border: 1px solid #444;
+                overflow-y: hidden; z-index: 10000; box-sizing: border-box; white-space: pre-wrap;
+                user-select: text; -webkit-user-select: text;
+             `;
+				document.body.appendChild(logPanel);
+			}
+
 			draw() {
 			}
 
 			#initMapTest() {
 				const ctx = this.#ctx;
-				let seed = parseInt(document.getElementById("seed").value, 10);
-				seed = Number.isNaN(seed) ? null : seed;
+				let setSeed = parseInt(document.getElementById("seed").value, 10);
+				setSeed = Number.isNaN(setSeed) ? null : setSeed;
 
 				const config = {
 					minRooms: 6,
@@ -81,9 +99,18 @@
 					roomPadding: 3,
 					corridorType: "mixed",
 					extraLoopChance: 0.25,
-					seed: seed
+					seed: setSeed
 				};
-				const { map, rooms, corridors } = generateDungeon(80, 50, config);
+				const { map, rooms, corridors, seed } = generateDungeon(80, 50, config);
+				console.log("seed "+seed);
+
+				// Update the seed log widget
+				this.#seedHistory.push(`Seed: ${seed}`);
+				if (this.#seedHistory.length > 3) {
+					this.#seedHistory.shift(); // Keep only last 3 generations visible
+				}
+				this.#seedLogPanel.textContent = this.#seedHistory.join('\n');
+
 				drawMap(ctx, map, 12);
 				this.displayDungeonData({ map, rooms, corridors });
 				app.doRender();
@@ -91,12 +118,14 @@
 
 
 			displayDungeonData(dungeonData) {
+				// Remove existing panels during regenerations
 				const oldPanel = document.getElementById("dungeon-debug-panel");
 				if (oldPanel) oldPanel.remove();
 
 				const panel = document.createElement("div");
 				panel.id = "dungeon-debug-panel";
 
+				// Basic formatting CSS via JS injection
 				panel.style.cssText = `
         position: fixed; top: 10px; right: 10px; width: 340px; max-height: 95vh;
         background: rgba(30, 30, 35, 0.95); color: #0f0; font-family: 'Courier New', monospace;
@@ -104,7 +133,7 @@
         overflow-y: auto; border: 1px solid #333; z-index: 10000; box-sizing: border-box;
     `;
 
-				let html = `<h2 style="margin:0 0 10px 0; color:#fff; font-size:14px; border-bottom:1px solid #333; padding-bottom:5px;">Dungeon Telemetry</h2>`;
+				let html = '';
 
 				html += `<p><b>Rooms Spawned:</b> ${dungeonData.rooms.length}<br><b>Total Corridors:</b> ${dungeonData.corridors.length}</p>`;
 
@@ -139,17 +168,16 @@
 </head>
 <body>
 
-	<div style="
-		position:absolute;
-		top:10px;
-		left:10px;
-		z-index:100;
-		color: white;
-	">
-		<button id="mapGen">Generate</button>
-		<div><span>Seed</span><input type="text" id="seed" style="width: 110px; margin-left: 6px"/></div>
-	</div>
-
+<div style="
+       position:absolute;
+       top:10px;
+       left:10px;
+       z-index:100;
+       color: white;
+    ">
+	<button id="mapGen">Generate</button>
+	<div><span>Seed</span><input type="text" id="seed" style="width: 110px; margin-left: 6px"/></div>
+</div>
 <script>
 
 </script>
