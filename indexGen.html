@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="us">
+<head>
+	<meta charset="UTF-8">
+	<title>Roguelike</title>
+
+	<style>
+		body {
+			margin: 0;
+			background: black;
+			overflow: hidden;
+		}
+
+		canvas {
+			display: block;
+		}
+	</style>
+	<script src="levelGen/code.js"></script>
+	<script type="module">
+
+		class App{
+			#updateFunc;
+			#needRender = true;
+
+			constructor() {
+				this.gui = new GUI;
+
+				this.#updateFunc = (time)=>{ this.update(time); }
+				requestAnimationFrame(this.#updateFunc);
+			}
+
+			update(currentTime) {
+				if(this.#needRender){
+					this.#needRender = false;
+					this.gui.draw();
+				}
+
+				requestAnimationFrame(this.#updateFunc);
+			}
+
+			doRender() {
+				this.#needRender = true;
+			}
+		}
+
+		class GUI{
+			#canvas
+			#ctx;
+
+			constructor() {
+				document.addEventListener('DOMContentLoaded', () =>{
+					document.getElementById('mapGen').addEventListener('click', ()=>this.#initMapTest() )
+					this.#initCanvas();
+					this.#initMapTest();
+				});
+			}
+
+
+			#initCanvas(){
+				const canvas = this.#canvas = document.createElement("canvas");
+				document.body.appendChild(canvas);
+				this.#ctx = canvas.getContext("2d");
+
+				canvas.width = 1200;
+				canvas.height = 700;
+			}
+
+			draw() {
+			}
+
+			#initMapTest() {
+				const ctx = this.#ctx;
+				let seed = parseInt(document.getElementById("seed").value, 10);
+				seed = Number.isNaN(seed) ? null : seed;
+
+				const config = {
+					minRooms: 6,
+					maxRooms: 12,
+					minRoomSize: 4,
+					maxRoomSize: 12,
+					roomPadding: 3,
+					corridorType: "mixed",
+					extraLoopChance: 0.25,
+					seed: seed
+				};
+				const { map, rooms, corridors } = generateDungeon(80, 50, config);
+				drawMap(ctx, map, 12);
+				this.displayDungeonData({ map, rooms, corridors });
+				app.doRender();
+			}
+
+
+			displayDungeonData(dungeonData) {
+				const oldPanel = document.getElementById("dungeon-debug-panel");
+				if (oldPanel) oldPanel.remove();
+
+				const panel = document.createElement("div");
+				panel.id = "dungeon-debug-panel";
+
+				panel.style.cssText = `
+        position: fixed; top: 10px; right: 10px; width: 340px; max-height: 95vh;
+        background: rgba(30, 30, 35, 0.95); color: #0f0; font-family: 'Courier New', monospace;
+        font-size: 11px; padding: 15px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        overflow-y: auto; border: 1px solid #333; z-index: 10000; box-sizing: border-box;
+    `;
+
+				let html = `<h2 style="margin:0 0 10px 0; color:#fff; font-size:14px; border-bottom:1px solid #333; padding-bottom:5px;">Dungeon Telemetry</h2>`;
+
+				html += `<p><b>Rooms Spawned:</b> ${dungeonData.rooms.length}<br><b>Total Corridors:</b> ${dungeonData.corridors.length}</p>`;
+
+				html += `<h3 style="color:#ff0; margin:10px 0 5px 0; font-size:12px;">[Rooms Metadata]</h3>`;
+				dungeonData.rooms.forEach(r => {
+					html += `
+        <div style="background:rgba(255,255,255,0.05); padding:6px; margin-bottom:5px; border-left:3px solid #ff0;">
+            <b>ID:</b> ${r.id} | <b>Dim:</b> ${r.w}x${r.h}<br>
+            <b>Bounds:</b> (${r.x1},${r.y1}) to (${r.x2},${r.y2})<br>
+            <b>Links:</b> [${r.connectedTo.join(", ")}]
+        </div>`;
+				});
+
+				html += `<h3 style="color:#0cf; margin:15px 0 5px 0; font-size:12px;">[Corridors Metadata]</h3>`;
+				dungeonData.corridors.forEach((c, idx) => {
+					html += `
+        <div style="background:rgba(255,255,255,0.05); padding:6px; margin-bottom:5px; border-left:3px solid #0cf;">
+            <b>No:</b> ${idx+1} | <b>${c.fromRoom} &rarr; ${c.toRoom}</b> (${c.type})<br>
+            <b>Start:</b> [${c.startPos.x}, ${c.startPos.y}] | <b>End:</b> [${c.endPos.x}, ${c.endPos.y}]<br>
+            <b>Path Size:</b> ${c.length} tiles
+        </div>`;
+				});
+
+				panel.innerHTML = html;
+				document.body.appendChild(panel);
+			}
+		}
+
+		const app = new App();
+
+	</script>
+</head>
+<body>
+
+	<div style="
+		position:absolute;
+		top:10px;
+		left:10px;
+		z-index:100;
+		color: white;
+	">
+		<button id="mapGen">Generate</button>
+		<div><span>Seed</span><input type="text" id="seed" style="width: 110px; margin-left: 6px"/></div>
+	</div>
+
+<script>
+
+</script>
+
+</body>
+</html>
