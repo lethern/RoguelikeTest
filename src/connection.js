@@ -1,5 +1,6 @@
 import EventEmitter from './utils/eventEmitter.js';
 import {CryptoRandom} from './utils/random.js'
+import {ConnectionEvents, ConnectionRTCEvents} from "./editor/editorEvents.js";
 
 /** @readonly */
 const ConnectionStatus = {
@@ -140,7 +141,7 @@ class WSClient extends EventEmitter {
 					return;
 				}
 
-				this.emit('data', msg);
+				this.emit(ConnectionEvents.DATA, msg);
 			} catch (e) {
 				this.#error("WS Error occurred", e);
 			}
@@ -222,13 +223,13 @@ class WSClient extends EventEmitter {
 	#setWSStatus(status, message = undefined) {
 		this.#wsStatus = status;
 		this.#log(`WS status: ${status}` + (message ? ", " + message : ""));
-		this.emit('wsStatus', status);
+		this.emit(ConnectionEvents.WS_STATUS, status);
 	}
 
 	#setMaster(status) {
 		this.#isMaster = status;
 		this.#log(`Master status: ${status}`);
-		this.emit('masterStatus', status);
+		this.emit(ConnectionEvents.MASTER_STATUS, status);
 	}
 
 	// we have a connection with another client - make a timer
@@ -241,7 +242,7 @@ class WSClient extends EventEmitter {
 		}else{
 			// new peer
 			this.#log(`Peer connected: ${peerId}`);
-			this.emit('peerConnected', peerId);
+			this.emit(ConnectionEvents.PEER_CONNECTED, peerId);
 
 			// let the other client know about us
 			this.send({ type: "ping", id: this.#clientId });
@@ -259,7 +260,7 @@ class WSClient extends EventEmitter {
 
 	#peerDisconnected(peerId){
 		this.#peers.delete(peerId);
-		this.emit('peerDisconnected', peerId);
+		this.emit(ConnectionEvents.PEER_DISCONNECTED, peerId);
 		this.#updateOverallPeerStatus();
 	}
 
@@ -267,12 +268,12 @@ class WSClient extends EventEmitter {
 		const hasPeers = this.#peers.size > 0;
 		if (this.#isPeerConnected !== hasPeers) {
 			this.#isPeerConnected = hasPeers;
-			this.emit('peerStatus', hasPeers);
+			this.emit(ConnectionEvents.PEER_STATUS, hasPeers);
 		}
 	}
 
 	#log(text) {
-		this.emit('log', text);
+		this.emit(ConnectionEvents.LOG, text);
 	}
 
 	#clearPeers() {
@@ -305,7 +306,7 @@ class RTCClient extends EventEmitter {
 		this.#setRTCStatus(ConnectionStatus.NONE);
 		this.#resetCredentialsPromise();
 
-		this.#wsClient.on('data', async (msg) => {
+		this.#wsClient.on(ConnectionRTCEvents.DATA, async (msg) => {
 			if (msg.type === "credentials") {
 				this.#lastCredential = msg.credential;
 				if (!this.#rtcPeerConn) {
@@ -422,7 +423,7 @@ class RTCClient extends EventEmitter {
 		if(this.#rtcStatus === status) return;
 		this.#rtcStatus = status;
 		this.#log(`RTC status: ${status}` + (message ? ", " + message : ""));
-		this.emit('rtcStatus', status);
+		this.emit(ConnectionRTCEvents.RTC_STATUS, status);
 	}
 
 	async #handleSignaling(msg) {
@@ -528,7 +529,7 @@ class RTCClient extends EventEmitter {
 		this.#rtcChannel.onmessage = e => {
 			this.#msgCount++;
 			this.#byteCount += typeof e.data === 'string' ? textEncoder.encode(e.data).length : (e.data.byteLength || e.data.size || 0);
-			this.emit('data', e.data);
+			this.emit(ConnectionRTCEvents.DATA, e.data);
 		};
 		
 		this.#rtcChannel.onopen = () => {
@@ -541,7 +542,7 @@ class RTCClient extends EventEmitter {
 	}
 
 	#log(text) {
-		this.emit('log', text);
+		this.emit(ConnectionRTCEvents.LOG, text);
 	}
 }
 

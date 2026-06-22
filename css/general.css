@@ -52,13 +52,13 @@ canvas {
 	z-index: 101;
 	border: 1px solid #333;
 	border-radius: 4px;
-	margin-left: -30px;
 }
 .dropdown-content a {
 	color: #ccc;
 	padding: 8px 12px;
 	text-decoration: none;
 	display: block;
+	white-space: pre;
 }
 .dropdown-content a:hover {
 	background-color: #333;
@@ -414,3 +414,240 @@ canvas {
 .btn-success { background: #16a34a; }
 .btn-success:hover { background: #15803d; }
 hr { border: 0; border-top: 1px solid #2e2e33; margin: 12px 0; }
+
+/* replay */
+#replayInfo{
+	color: #d5d8df;
+	white-space: pre;
+}
+
+.replay-node-item {
+	padding: 6px;
+	display: flex;
+	justify-content: space-between;
+	cursor: pointer;
+	border-bottom: 1px solid #444;
+}
+
+.replay-stats-section {
+	margin-bottom: 15px;
+	padding-bottom: 10px;
+	border-bottom: 2px solid #666;
+}
+
+.replay-stats-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+	font-size: 0.95em;
+}
+
+.replay-nodes-container {
+	background: #1e1e1e;
+	border: 1px solid #333;
+	border-radius: 4px;
+}
+
+.replay-data-section {
+	margin-top: 15px;
+}
+
+.replay-data-pre {
+	background: #1e1e1e;
+	border: 1px solid #333;
+	border-radius: 4px;
+	padding: 10px;
+	margin: 0;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	font-size: 0.85em;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.replay-active-indicator {
+	color: #4caf50;
+	font-size: 0.8em;
+	margin-left: 5px;
+}
+
+.replay-size-display {
+	color: #888;
+	font-size: 0.9em;
+}
+
+/* map */
+.editor-panel{
+	height: 100%;
+	box-sizing: border-box;
+}
+.editor-toolbar .search-name {
+	width: 45%;
+}
+
+.editor-toolbar .search-tag {
+	width: 35%;
+}
+
+.tile-list-item {
+	padding: 5px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.tile-list-item.active {
+	background-color: #5a5a5a;
+}
+
+.map-props-widget {
+	padding: 10px;
+	width: 100%;
+	max-width: 300px;
+	overflow: auto;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.map-props-widget input {
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.map-props-widget label {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	width: 100%;
+}
+
+.map-props-widget button {
+	padding: 2px 6px;
+	font-size: 11px;
+	white-space: pre;
+}
+
+.map-props-wrapper {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 100%;
+}
+
+.map-props-wrapper .map-props-header {
+	display: flex;
+	justify-content: space-between;
+	gap: 5px;
+	width: 100%;
+}
+.map-props-widget input{
+	box-sizing: border-box;
+}
+
+.map-props-widget label{
+	display: flex; flex-direction: column; gap: 2px;
+}
+#mapIdDisplay{
+	font-family: monospace; color: #888; font-size: 1em;
+}
+
+.map-props-widget button{
+	padding: 2px 6px; font-size: 11px; white-space: pre;
+}
+#btnBack {
+	align-self: center;
+}
+
+#mapWidth, #mapHeight {
+	max-width: 50px;
+}
+
+.tile-widget{
+	display: flex; flex-direction: column; height: 100%; min-height: 100px;
+}
+
+/* Editor panels */
+.editor-widget {
+	padding: 10px;
+	height: 100%;
+	overflow: auto;
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+}
+
+.editor-toolbar {
+	padding: 5px;
+	border-bottom: 1px solid #ccc;
+	display: flex;
+	gap: 5px;
+	flex-shrink: 0;
+	max-width: 300px;
+}
+
+.editor-toolbar input{
+	height: 1.2em;
+}
+.editor-toolbar button{
+	height: 1.65em;
+	white-space: pre;
+}
+
+.editor-list {
+	width: 200px;
+	border-right: 1px solid #ccc;
+	overflow-y: auto;
+	flex-shrink: 0;
+	background-color: rgb(61, 61, 61);
+}
+
+.editor-main {
+	flex: 1;
+	overflow: hidden;
+	display: flex;
+	min-height: 0;
+}
+
+.editor-content {
+	flex: 1;
+	padding: 10px;
+	overflow: auto;
+}
+
+.editor-canvas {
+	border: 1px solid #000;
+	margin-bottom: 10px;
+}
+
+/* brush */
+
+.brush-widget{
+	display: flex; flex-direction: column; gap: 10px;
+}
+
+.brush-btn{
+	padding: 4px 10px; background: #374151; color: #e5e7eb; border: 1px solid #4b5563; border-radius: 3px; cursor: pointer;
+}
+
+#selectedTileDisplay{
+	padding: 8px; background: #1f2937; border: 1px solid #374151; border-radius: 4px; min-height: 40px;
+}
+.layerBtn {
+	padding: 4px 8px;
+	font-size: 11px;
+	cursor: pointer;
+	background: #2563eb;
+	color: white;
+	border: none;
+	border-radius: 4px;
+}
+
+/* game */
+.gameCanvas{
+	display: block;
+	image-rendering: pixelated;
+	background: #000;
+	flex: 1;
+}

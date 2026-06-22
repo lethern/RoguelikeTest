@@ -1,7 +1,9 @@
 import { GoldenLayout, LayoutConfig } from '../libs/goldenLayoutBundle/esm/golden-layout.js';
-import {actions} from './actionsHistory.js';
-import {BaseCommand, commandRegistry} from './actionsHistory.js'
+import {actions} from './historyStorage.js';
+import {BaseCommand, commandRegistry} from './historyNode.js'
 import EventEmitter from './utils/eventEmitter.js';
+import {persistenceManager} from './persistenceManager.js';
+import {PersistenceEvents, GuiEvents} from './editor/editorEvents.js';
 
 class GUILayout{
 	preventEvents = false;
@@ -132,10 +134,19 @@ class GUILayout{
 		this.#updateLayoutSaved();
 	}
 
+	clearLayout(){
+		const config = this.#getTestLayout();
+		this.#layoutInitializeHeaders(config);
+		this.#layout.loadLayout(config);
+		this.#updateLayoutSaved();
+	}
+
 	#attachListeners() {
 		this.#layout.on('itemCreated', (event) => {
 			const item = event.target;
 			if (item.isComponent) {
+				const container = item._container;
+
 				item.on('focus', (e) => {
 					if(e.target.componentType && !this.preventEvents) {
 						let prevId = this.#lastFocusedComponent ? this.#lastFocusedComponent.componentType : null;
@@ -150,17 +161,18 @@ class GUILayout{
 					}
 				});
 
-				const container = item._container;
+
 				container.on('resize', () => {
-					if((container.savedWidth !== container.width || container.savedHeight !== container.height)
+					if(container.savedWidth !== undefined &&
+							(container.savedWidth !== container.width || container.savedHeight !== container.height)
 							&& !this.preventEvents && container.width !== 0 && container.height !== 0 )
 					{
-						const isUiSkip = (container.savedWidth===undefined || this.#preventLayoutSaving);
+						const isUiSkip = (this.#preventLayoutSaving);
 						actions.recordDispatched(new ResizeWidgetCommand({id: container.componentType, width: container.width, height: container.height,
 							prevWidth: container.savedWidth, prevHeight: container.savedHeight}, isUiSkip));
-						container.savedWidth = container.width;
-						container.savedHeight = container.height;
 					}
+					container.savedWidth = container.width;
+					container.savedHeight = container.height;
 
 					const main = document.getElementById('main');
 					const rect = main.getBoundingClientRect();
@@ -212,16 +224,12 @@ class GUILayout{
 	#updateLayoutSaved(){
 		if(this.#preventLayoutSaving) return;
 
-		const layoutConfig = this.#layout.saveLayout();
-		this.#lastLayoutSave = this.#stripLayoutState(layoutConfig);
+		this.#lastLayoutSave = this.#getStrippedLayout();
+	}
 
-		//console.log("current ", this.#lastLayoutSave);
-		//console.log("stateChanged ", this.#lastLayoutSave);
-		//const layoutJson = JSON.stringify(layoutSlim);
-		//const changed = layoutJson !== this.#lastLayoutSave;
-		//this.#lastLayoutSave = layoutJson;
-		//console.log("stateChanged, changed "+changed+", full "+JSON.stringify(LayoutConfig.fromResolved(layoutConfig).root).length+", slim "+layoutJson.length);
-		//console.log(layoutJson)
+	#getStrippedLayout(){
+		const layoutConfig = this.#layout.saveLayout();
+		return this.#stripLayoutState(layoutConfig);
 	}
 
 	#stripLayoutState(layoutConfig) {
@@ -321,6 +329,90 @@ class GUILayout{
 			component.container.setSize(width, height);
 		}
 	}
+
+	openWorkspace(layoutConfig) {
+		const getComponents = (config) => {
+			const comps = [];
+			if (config.type === 'component') comps.push(config);
+			if (config.content) {
+				for (const child of config.content) {
+					comps.push(...getComponents(child));
+				}
+			}
+			return comps;
+		};
+
+		const allComponents = getComponents(layoutConfig);
+		const missing = allComponents.filter(c => !this.findComponent(c.componentType));
+
+		if (missing.length === 0) {
+			allComponents.forEach(c => this.focusComponent(c.componentType));
+			return;
+		}
+
+		const currentLayoutConfig = LayoutConfig.fromResolved(this.#layout.saveLayout());
+
+		const existingRoot = currentLayoutConfig?.root ?? null;
+
+		const buildConfig = (config) => {
+			if (config.type === 'ROOT') {
+				if (!existingRoot || (existingRoot.content && existingRoot.content.length === 0)) {
+					return null;
+				}
+
+				const clonedRoot = structuredClone(existingRoot);
+				delete clonedRoot.width;
+				delete clonedRoot.height;
+
+				return clonedRoot;
+			}
+
+			if (config.type === 'component') {
+				if (!missing.includes(config)) return null;
+				return {
+					...config,
+					title: this.#registeredComponents[config.componentType].title
+				};
+			}
+
+			if (config.content) {
+				const newContent = [];
+				for (const child of config.content) {
+					const resolvedChild = buildConfig(child);
+					if (!resolvedChild) continue;
+
+					// GoldenLayout rule: Stacks can only contain Components.
+					// If ROOT resolves to a container layout (row/col/stack), flatten it into tabs.
+					if (config.type === 'stack' && resolvedChild.type !== 'component') {
+						newContent.push(...getComponents(resolvedChild));
+					} else {
+						newContent.push(resolvedChild);
+					}
+				}
+
+				if (newContent.length === 0) return null;
+				return { ...config, content: newContent };
+			}
+
+			return { ...config };
+		};
+
+		const mergedRootConfig = buildConfig(layoutConfig);
+		if (!mergedRootConfig) return;
+
+		currentLayoutConfig.root = mergedRootConfig;
+
+		this.#layoutInitializeHeaders(currentLayoutConfig);
+
+		this.#layout.loadLayout(currentLayoutConfig);
+
+		missing.forEach(c => this.showComponent(c.componentType));
+		this.#updateLayoutSaved();
+	}
+
+	getLastLayoutSave(){
+		return this.#lastLayoutSave;
+	}
 }
 
 class GUI extends EventEmitter{
@@ -331,16 +423,49 @@ class GUI extends EventEmitter{
 
 	constructor() {
 		super();
-		document.addEventListener('DOMContentLoaded', () =>{
-			this.#layout.init();
-			this.#attachListeners();
+		this.#initPersistence();
+		// document.addEventListener('DOMContentLoaded', () =>{
+		// 	this.#layout.init();
+		// 	this.#attachListeners();
+		// });
+	}
+
+	#setMode(mode) {
+		const editor = document.getElementById('mainLayout');
+		const game = document.getElementById('gameView');
+		if (mode === 'editor') {
+			editor.style.display = 'block';
+			game.style.display = 'none';
+			this.emit(GuiEvents.SHOW_GAME, false);
+		} else {
+			editor.style.display = 'none';
+			game.style.display = 'block';
+			this.emit(GuiEvents.SHOW_GAME, true);
+		}
+	}
+	
+	#initPersistence() {
+		persistenceManager.on(PersistenceEvents.SAVE, (components) => {
+			components.gui = this.#layout.getLastLayoutSave();
 		});
+		persistenceManager.on(PersistenceEvents.LOAD, (components) => {
+			if (components.gui) {
+				this.syncLayout(components.gui);
+			}
+		});
+	}
+
+	init(){
+		this.#layout.init();
+		this.#attachListeners();
 	}
 
 	/** @param {(container: any, state: any) => void} onRender */
 	registerComponent(name, title, group, onRender){
-		if(!this.#componentGroups[group]) this.#componentGroups[group]=[];
-		this.#componentGroups[group].push([name,title]);
+		if(group) {
+			if (!this.#componentGroups[group]) this.#componentGroups[group] = [];
+			this.#componentGroups[group].push([name, title]);
+		}
 
 		this.#layout.registerComponent(name, title, onRender);
 	}
@@ -353,11 +478,25 @@ class GUI extends EventEmitter{
 	}
 
 	showComponent(name) {
+		this.#showingComponentsSetup();
+		this.#layout.showComponent(name);
+	}
+
+	openWorkspace(layoutConfig) {
+		this.#showingComponentsSetup();
+		this.#layout.openWorkspace(layoutConfig);
+	}
+
+	/** @param {{layoutConfig: object, components: string[]}} data */
+	openWorkspaceClick(data){
+		actions.dispatch(new OpenWorkspaceCommand({...data, prevLayout: this.#layout.getLastLayoutSave()}));
+	}
+
+	#showingComponentsSetup(){
 		this.#layout.preventEvents = true;
 		if(this.#preventEventsTimer) clearTimeout(this.#preventEventsTimer);
 		this.#preventEventsTimer = setTimeout(()=>{ this.#layout.preventEvents = false;}, 20);
 
-		this.#layout.showComponent(name);
 	}
 
 	destroyComponent(name){
@@ -388,7 +527,7 @@ class GUI extends EventEmitter{
 	sendLayoutResize() {
 		const main = document.getElementById('main');
 		const rect = main.getBoundingClientRect();
-		this.emit('mainLayoutResize', { width: rect.width, height: rect.height });
+		this.emit(GuiEvents.MAIN_LAYOUT_RESIZE, { width: rect.width, height: rect.height });
 	}
 
 	syncLayout(layout){
@@ -397,14 +536,17 @@ class GUI extends EventEmitter{
 		this.#layout.preventEvents = false;
 	}
 
-	#attachListeners(){
-		window.addEventListener("keydown", (e) => {
-//              inputsManager.keyDown(e.key);
-		});
+	clearLayout(){
+		actions.dispatch(new ClearLayoutCommand({prevLayout: this.#layout.getLastLayoutSave()}));
+	}
 
-		window.addEventListener("keyup", (e) => {
-//              inputsManager.keyUp(e.key);
-		});
+	clearLayoutInternal(){
+		this.#layout.preventEvents = true;
+		this.#layout.clearLayout();
+		this.#layout.preventEvents = false;
+	}
+
+	#attachListeners(){
 
 		const bar = document.getElementById('menu-bar');
 		for(let group in this.#componentGroups){
@@ -441,6 +583,25 @@ class GUI extends EventEmitter{
 			}
 		}
 
+		const modeSelector = document.createElement('div');
+		modeSelector.style.cssText = 'margin-left: auto; margin-right: auto; display: flex; gap: 5px;';
+		
+		const btnEditor = document.createElement('button');
+		btnEditor.textContent = 'Editor';
+		btnEditor.addEventListener('click', () => {
+			this.#setMode('editor');
+		});
+		
+		const btnGame = document.createElement('button');
+		btnGame.textContent = 'Game';
+		btnGame.addEventListener('click', () => {
+			this.#setMode('game');
+		});
+		
+		modeSelector.appendChild(btnEditor);
+		modeSelector.appendChild(btnGame);
+		bar.appendChild(modeSelector);
+
 		// ioManager.attachListener("menuClick", (data) => {
 		// 	//gui.showComponent(data.id);
 		// 	const command = new OpenWidgetCommand(gui, data.id);
@@ -459,13 +620,17 @@ class GUI extends EventEmitter{
 		//	}
 		//});
 	}
+
+	getLastLayoutSave(){
+		return this.#layout.getLastLayoutSave();
+	}
 }
 
 //#region gui commands
 class OpenWidgetCommand extends BaseCommand {
+	static friendlyName = 'Open Widget';
 	constructor(data) {
 		super(data);
-		//this.isUiSkip = true;
 	}
 	execute() {
 		gui.showComponent(this.data.id);
@@ -476,10 +641,27 @@ class OpenWidgetCommand extends BaseCommand {
 }
 commandRegistry.register(OpenWidgetCommand);
 
-class FocusWidgetCommand extends BaseCommand {
+class OpenWorkspaceCommand extends BaseCommand {
+	static friendlyName = 'Open Workspace';
 	constructor(data) {
 		super(data);
-		//this.isUiSkip = true;
+	}
+	execute() {
+		gui.openWorkspace(this.data.layoutConfig);
+	}
+	undo() {
+		for (const name of this.data.components) {
+			gui.destroyComponent(name);
+		}
+		gui.syncLayout(this.data.prevLayout);
+	}
+}
+commandRegistry.register(OpenWorkspaceCommand);
+
+class FocusWidgetCommand extends BaseCommand {
+	static friendlyName = 'Focus Widget';
+	constructor(data) {
+		super(data);
 	}
 	execute() {
 		gui.focusComponent(this.data.id);
@@ -491,9 +673,9 @@ class FocusWidgetCommand extends BaseCommand {
 commandRegistry.register(FocusWidgetCommand);
 
 class DestroyWidgetCommand extends BaseCommand {
+	static friendlyName = 'Close Widget';
 	constructor(data) {
 		super(data);
-		//this.isUiSkip = true;
 	}
 	execute() {
 		gui.destroyComponent(this.data.id);
@@ -506,6 +688,7 @@ class DestroyWidgetCommand extends BaseCommand {
 commandRegistry.register(DestroyWidgetCommand);
 
 class ResizeWidgetCommand extends BaseCommand {
+	static friendlyName = 'Resize Widget';
 	constructor(data, isUiSkip = false) {
 		super(data);
 		this.isUiSkip = isUiSkip;
@@ -520,6 +703,7 @@ class ResizeWidgetCommand extends BaseCommand {
 commandRegistry.register(ResizeWidgetCommand);
 
 class SyncLayoutCommand extends BaseCommand {
+	static friendlyName = 'Sync Layout';
 	constructor(data) {
 		super(data);
 	}
@@ -532,8 +716,24 @@ class SyncLayoutCommand extends BaseCommand {
 }
 commandRegistry.register(SyncLayoutCommand);
 
+class ClearLayoutCommand extends BaseCommand {
+	static friendlyName = 'Clear Layout';
+	constructor(data) {
+		super(data);
+	}
+	execute() {
+		gui.clearLayoutInternal();
+	}
+	undo() {
+		gui.syncLayout(this.data.prevLayout);
+	}
+}
+commandRegistry.register(ClearLayoutCommand);
+
 
 class ScrollCommand extends BaseCommand {
+	static friendlyName = 'Scroll';
+
 	constructor(data) {
 		super(data);
 		//this.containerId = scrollableContainerId;
@@ -550,9 +750,6 @@ class ScrollCommand extends BaseCommand {
 	undo() {
 		//const el = document.getElementById(this.containerId);
 		//if (el) el.scrollTop = this.oldValue;
-	}
-	updateValue(latestScrollTop) {
-		this.data.newValue = latestScrollTop;
 	}
 }
 commandRegistry.register(ScrollCommand);

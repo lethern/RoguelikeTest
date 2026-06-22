@@ -1,13 +1,8 @@
-
-
+import {config} from "./config.js";
 
 class App{
-	#updateFunc;
-	#needRender = true;
 
 	constructor() {
-		this.#updateFunc = (time)=>{ this.update(time); }
-
 		this.#loadConfig();
 
 		document.addEventListener('DOMContentLoaded', () =>{
@@ -15,8 +10,28 @@ class App{
 		});
 	}
 
-	init(){
-		requestAnimationFrame(this.#updateFunc);
+	async init() {
+		//requestAnimationFrame(this.#updateFunc);{
+
+		const {initAll} = await import('./initialization.js');
+		initAll();
+
+		const {gui} = await import('./gui.js');
+		gui.init();
+
+		const {inputsManager} = await import('./game/inputsManager.js');
+		inputsManager.init();
+
+		const {replayManager} = await import('./replay.js');
+		replayManager.init();
+
+		//const {actionSyncCoordinator} = await import('./coordinators.js');
+		//actionSyncCoordinator.loadPersisted();
+		const {persistenceManager} = await import('./persistenceManager.js');
+		persistenceManager.load();
+
+		const {gameRenderer} = await import('./game/game.js');
+		gameRenderer.init();
 	}
 
 	#loadConfig(){
@@ -24,19 +39,6 @@ class App{
 		if(saved) config.loadConfigFromData(JSON.parse(saved));
 	}
 
-	update(currentTime) {
-//           inputsManager.handleKeyboard(currentTime);
-		if(this.#needRender){
-			this.#needRender = false;
-//              this.gui.draw();
-		}
-
-		requestAnimationFrame(this.#updateFunc);
-	}
-
-	doRender() {
-		this.#needRender = true;
-	}
 }
 
 export const app = new App();

@@ -1,13 +1,14 @@
-import {actions} from './actionsHistory.js';
+import {actions} from './historyStorage.js';
+import {HistoryEvents} from "./editor/editorEvents.js";
 
-
-class ReplayManager{
+class ReplayManager {
 	constructor() {
-		document.addEventListener('DOMContentLoaded', () =>{
-			this.init();
-		});
+		// document.addEventListener('DOMContentLoaded', () => {
+		// 	this.init();
+		// });
 	}
-	init(){
+
+	init() {
 		document.getElementById("replayBack").addEventListener("click", () => {
 			this.stepBack();
 		});
@@ -15,18 +16,53 @@ class ReplayManager{
 		document.getElementById("replayForward").addEventListener("click", () => {
 			this.stepForward();
 		});
-	}
-	stepBack(){
-		//if editor
-		// else game
 
+		actions.on(HistoryEvents.COMMAND_ADDED, () => this.updateDisplay());
+		actions.on(HistoryEvents.STEP_BACK, () => this.updateDisplay());
+		actions.on(HistoryEvents.STEP_FORWARD, () => this.updateDisplay());
+		actions.on(HistoryEvents.HISTORY_REPLACED, () => this.updateDisplay());
+
+		this.updateDisplay();
+	}
+
+	stepBack() {
 		actions.stepBack();
 	}
 
-	stepForward(){
-		//if editor
-		// else game
+	stepForward() {
 		actions.stepForward();
 	}
+
+	getCommandName(command) {
+		if (!command) return '-';
+		if (command.constructor.friendlyName) {
+			return command.constructor.friendlyName;
+		}
+		return command.constructor.name || 'Command';
+	}
+
+	updateDisplay() {
+		const current = actions.getCurrentNode();
+		const prev = current.parent;
+		const next = current.getLatestChild();
+
+		const prevName = prev && prev.command ? this.getCommandName(prev.command) : '-';
+		const currName = current.command ? this.getCommandName(current.command) : '-';
+		const nextName = next ? this.getCommandName(next.command) : '-';
+
+		let info = `Prev: ${prevName}  |  Curr: ${currName}`;
+
+		if (next) {
+			info += `  |  Next: ${nextName}`;
+		}
+
+		if(current !== actions.getLastNode()){
+			document.getElementById("replayInfo").textContent = info;
+		}else{
+			document.getElementById("replayInfo").textContent = null;
+		}
+
+	}
 }
-const replayManager = new ReplayManager()
+
+export const replayManager = new ReplayManager();

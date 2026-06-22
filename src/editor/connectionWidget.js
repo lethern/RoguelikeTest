@@ -1,5 +1,6 @@
 import {gui} from "../gui.js";
 import { wsConnection, rtcConnection } from '../connection.js';
+import {ConnectionEvents, ConnectionRTCEvents} from "./editorEvents.js";
 
 class RemoteCursor {
 	#owner;
@@ -172,7 +173,6 @@ class ConnectionWidget {
 		</div>
 		`;
 
-		this.mainDiv = document.getElementById("main");
 		this.chat = root.querySelector(".wl-chat");
 		this.logsDiv = root.querySelector(".wl-logs");
 		this.wsStatusLabel = root.querySelector(".wsStatus");
@@ -220,28 +220,28 @@ class ConnectionWidget {
 			if (this.logHistory.length > 50) this.logHistory.shift();
 			this.logsDiv.textContent = this.logHistory.join("\n");
 		};
-		wsConnection.on('log', logger);
+		wsConnection.on(ConnectionEvents.LOG, logger);
 
-		wsConnection.on('wsStatus', (status) => {
+		wsConnection.on(ConnectionEvents.WS_STATUS, (status) => {
 			this.wsStatusLabel.textContent = status;
 		});
 
-		wsConnection.on('masterStatus', (status) => {
+		wsConnection.on(ConnectionEvents.MASTER_STATUS, (status) => {
 			this.masterStatusLabel.textContent = status ? "YES" : "NO";
 			gui.sendLayoutResize();
 		});
 
-		wsConnection.on('peerStatus', (isPeer) => {
+		wsConnection.on(ConnectionEvents.PEER_STATUS, (isPeer) => {
 			this.peerStatusLabel.textContent = isPeer ? "YES" : "NO";
 		});
 
-		rtcConnection.on('log', logger);
+		rtcConnection.on(ConnectionRTCEvents.LOG, logger);
 
-		rtcConnection.on('rtcStatus', (status) => {
+		rtcConnection.on(ConnectionRTCEvents.RTC_STATUS, (status) => {
 			this.rtcStatusLabel.textContent = status;
 		});
 
-		wsConnection.on('data', (msg) => {
+		wsConnection.on(ConnectionEvents.DATA, (msg) => {
 			if (msg.type === "chat") {
 				this.addChat("Peer: " + msg.text);
 			} else if (msg.type === "size") {
@@ -253,7 +253,7 @@ class ConnectionWidget {
 			}
 		});
 
-		rtcConnection.on('data', async (data) => {
+		rtcConnection.on(ConnectionRTCEvents.DATA, async (data) => {
 			let buf;
 			if (data instanceof Blob) {
 				buf = await data.arrayBuffer();

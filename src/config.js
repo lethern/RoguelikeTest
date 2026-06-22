@@ -1,4 +1,7 @@
+
 class Config {
+	#configVarValues = {};
+
 	loadConfigFromData(data){
 		for(const it in data){
 			const value = data[it];
@@ -15,14 +18,14 @@ class Config {
 	}
 
 	getConfigVarObject(name){
-		if(!ConfigVarValues[name]) throw new Error(`getConfigVar: missing var ${name}`);
-		return ConfigVarValues[name];
+		if(!this.#configVarValues[name]) throw new Error(`getConfigVar: missing var ${name}`);
+		return this.#configVarValues[name];
 	}
 
 	createConfigSave(){
 		const save = {};
-		for(const it in ConfigVar){
-			const confVar = this.getConfigVarObject(it);
+		for(const it in this.#configVarValues){
+			const confVar = this.#configVarValues(it);
 			if(confVar.value !== confVar.defaultValue){
 				save[it] = confVar.value;
 			}
@@ -31,9 +34,9 @@ class Config {
 	}
 
 	addConfigVar(name, value, desc, friendlyName = undefined){
-		if(ConfigVarValues[name]) throw new Error(`addConfigVar: ${name} already exists`);
+		if(this.#configVarValues[name]) throw new Error(`addConfigVar: ${name} already exists`);
 		if(!friendlyName) friendlyName = name.toLowerCase();
-		ConfigVarValues[name] = {value, defaultValue: value, friendlyName, desc};
+		this.#configVarValues[name] = {value, defaultValue: value, friendlyName, desc};
 	}
 }
 export const config = new Config;

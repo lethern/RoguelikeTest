@@ -1,5 +1,9 @@
-import { wsConnection, rtcConnection, CollabRole, FollowMode } from "../connection.js";
-import { globalStore } from "./monstersEditor.js";
+import {wsConnection, rtcConnection, CollabRole, FollowMode} from "../connection.js";
+import {globalStore} from "../globalStore.js";
+import {HistoryNode} from "../historyNode.js";
+import {actions} from '../historyStorage.js';
+import {gui} from "../gui.js";
+import {ConnectionEvents} from "./editorEvents.js";
 
 /*
            Client1 (Inviter)                            Client2 (Receiver)
@@ -21,11 +25,14 @@ Accept                                                  acceptClick ->
                      <------------------------------------
 Sync       on(ACCEPT) ->
              #remotePeerId = msg.senderId
-             #initiateStateSync() ->
+             #forceFullSync() ->
              send(STATE_SYNC)
                              -------------------------->
 Apply                                                   on(STATE_SYNC) ->
- sync                                                     globalStore.setState(...)
+ sync                                                     receiveState ->
+                                                          globalStore.setState(...)
+                                                          gui.syncLayout
+                                                          #applyActionHistory
                                                           send(STATE_ACK)
                         <---------------------------------
 Finalize   on(STATE_ACK) ->
@@ -39,9 +46,6 @@ Finalize   on(STATE_ACK) ->
                                                           #isActive = true
                                                           rtcConnect / UI block
  */
-// 1. przycisk ktory wszystko "zaczyna"
-// 2. drugi klient, ktory moze przyjac komunikat, musi rozpocząć polaczenie z WS
-//
 
 const CollabMessageType = {
 	STATE_ACK: "collab_state_ack",
@@ -51,6 +55,7 @@ const CollabMessageType = {
 	ACCEPT: "collab_accept",
 	REJECT: "collab_reject",
 	STATE_SYNC: "collab_state_sync",
+	FULL_SYNC_REQUEST: "collab_full_sync_request",
 };
 
 /**
@@ -100,7 +105,6 @@ class CollaborationManager {
 	#currentConfig = null;
 	#remotePeerId = null;
 
-	// Listeners so we can remove them when windows close
 	#boundWsStatusUpdate = null;
 	#boundPeerStatusUpdate = null;
 
@@ -122,26 +126,25 @@ class CollaborationManager {
 	}
 
 	#listenToNetwork() {
-		wsConnection.on('peerDisconnected', (peerId) => {
+		wsConnection.on(ConnectionEvents.PEER_DISCONNECTED, (peerId) => {
 			if (this.#isActive && this.#remotePeerId === peerId) {
 				console.log("Collab peer disconnected unexpectedly");
 				this.#handleDisconnect();
 			}
 		});
 
-		wsConnection.on("data", (msg) => {
-
+		wsConnection.on(ConnectionEvents.DATA, (msg) => {
 			if (msg.type === CollabMessageType.INVITE) {
 				this.#renderIncomingInviteBar(msg);
 			}
 
-			// we should have targetId (outside of invite msg)
-			if (msg.targetId !== wsConnection.getClientId()){ console.log("incorrect targetId: "+msg.targetId); return;}
+			// we should receive targetId (outside of invite msg)
+			if (msg.targetId !== wsConnection.getClientId()){ return;}
 
 			if (msg.type === CollabMessageType.ACCEPT) {
 				if (this.#currentConfig && this.#currentConfig.master) {
 					this.#remotePeerId = msg.senderId;
-					this.#initiateStateSync();
+					this.forceFullSync();
 				}
 			} else if (msg.type === CollabMessageType.REJECT) {
 				if (this.#overlay && this.#overlay.querySelector("#collab-btn-invite")) {
@@ -154,23 +157,19 @@ class CollaborationManager {
 				}
 			}
 
-			// we have #remotePeerId on us (outside of invite, accept or reject)
-			if(msg.senderId !== this.#remotePeerId){ console.log("incorrect senderId: "+msg.senderId); return;}
+			// #remotePeerId is set and we can check it against senderId (outside of invite, accept or reject)
+			if(msg.senderId !== this.#remotePeerId){ return;}
 
 			if (msg.type === CollabMessageType.STATE_SYNC) {
-				globalStore.setState(msg.state);
-				const computedHash = JSON.stringify(globalStore.state).length;
-
-				this.#sendMsg(CollabMessageType.STATE_ACK, {hash: computedHash});
-				//this.#finalizeSession();
-
+				this.#receiveState(msg);
+				this.#sendMsg(CollabMessageType.STATE_ACK);
 			} else if (msg.type === CollabMessageType.STATE_ACK) {
 				this.#finalizeSession();
 				this.#sendMsg(CollabMessageType.START);
-
 			} else if (msg.type === CollabMessageType.START) {
 				this.#finalizeSession();
-
+			} else if (msg.type === CollabMessageType.FULL_SYNC_REQUEST) {
+				this.forceFullSync();
 			} else if (msg.type === CollabMessageType.DISCONNECT) {
 				this.#handleDisconnect();
 				if (this.#overlay) {
@@ -180,7 +179,47 @@ class CollaborationManager {
 		});
 	}
 
-	openMenu(mainDiv) {
+	forceFullSync() {
+		if (this.#isActive && this.#currentConfig?.master) {
+			this.#collabBar.innerHTML = `<span class="collab-badge">Sending state...</span>`;
+
+			const stateSnapshot = globalStore.state;
+			const stateHash = JSON.stringify(stateSnapshot).length;
+			const layout = gui.getLastLayoutSave();
+
+			const { nodes, current, end } = this.#getActionHistory()
+
+			this.#sendMsg(CollabMessageType.STATE_SYNC, {
+				state: stateSnapshot,
+				hash: stateHash,
+				layout: layout,
+				nodes,
+				current,
+				end
+			});
+		}
+	}
+
+	#receiveState(msg) {
+		const {state, layout, nodes, current, end} = msg;
+
+		globalStore.setState(state);
+
+		if (msg.layout) {
+			gui.syncLayout(layout);
+		}
+
+		this.#applyActionHistory(nodes, current, end);
+	}
+
+
+	requestFullSync() {
+		if (this.#isActive) {
+			this.#sendMsg(CollabMessageType.FULL_SYNC_REQUEST);
+		}
+	}
+
+	openMenu() {
 		if (this.#overlay) this.close();
 
 		this.#overlay = document.createElement("div");
@@ -205,17 +244,10 @@ class CollaborationManager {
 
 	setUiBlocked(isBlocked) {
 		if (isBlocked) {
-			console.log("UI Blocked: Receiver control is OFF");
 			this.#mainLayout.style.pointerEvents = "none";
 		} else {
-			console.log("UI Unblocked: Receiver control returned");
 			this.#mainLayout.style.pointerEvents = "all";
 		}
-	}
-
-	isFollowUIEnabled() {
-		if (!this.#isActive || !this.#currentConfig) return true;
-		return this.#currentConfig.followMode === FollowMode.FOLLOW_ALL;
 	}
 
 	#showSetupError(msg) {
@@ -235,13 +267,13 @@ class CollaborationManager {
 		this.#boundWsStatusUpdate = () => this.#updateSetupDOM();
 		this.#boundPeerStatusUpdate = () => this.#updateSetupDOM();
 
-		wsConnection.on('wsStatus', this.#boundWsStatusUpdate);
-		wsConnection.on('peerStatus', this.#boundPeerStatusUpdate);
+		wsConnection.on(ConnectionEvents.WS_STATUS, this.#boundWsStatusUpdate);
+		wsConnection.on(ConnectionEvents.PEER_STATUS, this.#boundPeerStatusUpdate);
 	}
 
 	#unbindStatusUpdates() {
-		if (this.#boundWsStatusUpdate) wsConnection.off('wsStatus', this.#boundWsStatusUpdate);
-		if (this.#boundPeerStatusUpdate) wsConnection.off('peerStatus', this.#boundPeerStatusUpdate);
+		if (this.#boundWsStatusUpdate) wsConnection.off(ConnectionEvents.WS_STATUS, this.#boundWsStatusUpdate);
+		if (this.#boundPeerStatusUpdate) wsConnection.off(ConnectionEvents.PEER_STATUS, this.#boundPeerStatusUpdate);
 	}
 
 	#updateSetupDOM() {
@@ -264,10 +296,10 @@ class CollaborationManager {
 			const showReturnCtrl = this.#currentConfig?.roleLocal === CollabRole.FOLLOWER && this.#currentConfig?.blockControl;
 
 			this.#collabBar.innerHTML = `
-                <span class="collab-badge badge-active">SHARING</span>
-                <button id="collab-bar-menu" class="collab-btn">Menu</button>
-                ${showReturnCtrl ? '<button id="collab-bar-return-ctrl" class="collab-btn btn-danger">Return Control</button>' : ''}
-            `;
+				<span class="collab-badge badge-active">SHARING</span>
+				<button id="collab-bar-menu" class="collab-btn">Menu</button>
+				${showReturnCtrl ? '<button id="collab-bar-return-ctrl" class="collab-btn btn-danger">Return control</button>' : ''}
+			`;
 
 			this.#collabBar.querySelector("#collab-bar-menu").onclick = () => this.openMenu();
 
@@ -289,31 +321,31 @@ class CollaborationManager {
 		const wsStatus = wsConnection.getStatus();
 
 		this.#overlay.innerHTML = `
-            <div class="collab-modal">
-                <div class="collab-header">Setup collab</div>
-                <div class="collab-row">Server: <span class="collab-badge" id="collab-setup-ws-status">${wsStatus}</span></div>
-                <button id="collab-btn-connect" class="collab-btn btn-success" style="display: ${wsStatus === 'CONNECTED' ? 'none' : 'inline-block'}; margin-bottom: 8px;">Connect to Server</button>
-                
-                <div class="collab-row">Peer Connected: <span class="collab-badge" id="collab-setup-peer-status">${isPeer ? "YES" : "NO"}</span></div>
-                <div class="collab-error" id="collab-setup-error" style="display: none;"></div>
-                <hr>
-                <div class="collab-group">
-                    <label><input type="radio" name="collab-role" value="${CollabRole.MASTER}" checked> Master (share state)</label><br>
-                    <label><input type="radio" name="collab-role" value="${CollabRole.FOLLOWER}"> Follower (receive state)</label>
-                </div>
-                <div class="collab-group" id="collab-follower-options">
-                    <label><input type="checkbox" id="collab-follow-all" checked> Follower follows all UI changes</label><br>
-                    <label><input type="checkbox" id="collab-block-ctrl"> Block receiver control (UI Block)</label>
-                </div>
-                <div class="collab-group">
-                    <label><input type="checkbox" id="collab-ghost-cursor" checked> Share ghost cursor</label>
-                </div>
-                <div class="collab-actions">
-                    <button id="collab-btn-invite" class="collab-btn btn-primary">Send invite</button>
-                    <button id="collab-btn-close" class="collab-btn">Cancel</button>
-                </div>
-            </div>
-        `;
+			<div class="collab-modal">
+				<div class="collab-header">Setup collab</div>
+				<div class="collab-row">Server: <span class="collab-badge" id="collab-setup-ws-status">${wsStatus}</span></div>
+				<button id="collab-btn-connect" class="collab-btn btn-success" style="display: ${wsStatus === 'CONNECTED' ? 'none' : 'inline-block'}; margin-bottom: 8px;">Connect to Server</button>
+				
+				<div class="collab-row">Peer Connected: <span class="collab-badge" id="collab-setup-peer-status">${isPeer ? "YES" : "NO"}</span></div>
+				<div class="collab-error" id="collab-setup-error" style="display: none;"></div>
+				<hr>
+				<div class="collab-group">
+					<label><input type="radio" name="collab-role" value="${CollabRole.MASTER}" checked> Master (share state)</label><br>
+					<label><input type="radio" name="collab-role" value="${CollabRole.FOLLOWER}"> Follower (receive state)</label>
+				</div>
+				<div class="collab-group" id="collab-follower-options">
+					<label><input type="checkbox" id="collab-follow-all" checked> Follower follows all UI changes</label><br>
+					<label><input type="checkbox" id="collab-block-ctrl"> Block receiver control (UI Block)</label>
+				</div>
+				<div class="collab-group">
+					<label><input type="checkbox" id="collab-ghost-cursor" checked> Share ghost cursor</label>
+				</div>
+				<div class="collab-actions">
+					<button id="collab-btn-invite" class="collab-btn btn-primary">Send invite</button>
+					<button id="collab-btn-close" class="collab-btn">Cancel</button>
+				</div>
+			</div>
+		`;
 
 		const inviteBtn = this.#overlay.querySelector("#collab-btn-invite");
 		const closeBtn = this.#overlay.querySelector("#collab-btn-close");
@@ -372,25 +404,25 @@ class CollaborationManager {
 
 	#renderActiveView() {
 		this.#overlay.innerHTML = `
-            <div class="collab-modal">
-                <div class="collab-header">Active collab</div>
-                <div class="collab-row">Session status: <span class="collab-badge badge-active">SHARING</span></div>
-                <hr>
-                <div class="collab-row">Local client: <strong>${this.#currentConfig?.roleLocal}</strong></div>
-                <div class="collab-row">Remote client: <strong>${this.#currentConfig?.roleRemote}</strong></div>
-                
-                <div class="collab-group">
-                    <label><input type="checkbox" id="collab-toggle-cursor" ${this.#currentConfig?.shareCursor ? 'checked' : ''}> Share ghost cursor</label><br>
-                    ${this.#currentConfig?.roleLocal === CollabRole.FOLLOWER ?
+			<div class="collab-modal">
+				<div class="collab-header">Active collab</div>
+				<div class="collab-row">Session status: <span class="collab-badge badge-active">SHARING</span></div>
+				<hr>
+				<div class="collab-row">Local client: <strong>${this.#currentConfig?.roleLocal}</strong></div>
+				<div class="collab-row">Remote client: <strong>${this.#currentConfig?.roleRemote}</strong></div>
+				
+				<div class="collab-group">
+					<label><input type="checkbox" id="collab-toggle-cursor" ${this.#currentConfig?.shareCursor ? 'checked' : ''}> Share ghost cursor</label><br>
+					${this.#currentConfig?.roleLocal === CollabRole.FOLLOWER ?
 			`<label><input type="checkbox" id="collab-toggle-follow" ${this.#currentConfig?.followMode === FollowMode.FOLLOW_ALL ? 'checked' : ''}> Follow UI changes</label>` : ''}
-                </div>
-                <hr>
-                <div class="collab-actions">
-                    <button id="collab-btn-disconnect" class="collab-btn btn-danger">Disconnect</button>
-                    <button id="collab-btn-close" class="collab-btn">Back</button>
-                </div>
-            </div>
-        `;
+				</div>
+				<hr>
+				<div class="collab-actions">
+					<button id="collab-btn-disconnect" class="collab-btn btn-danger">Disconnect</button>
+					<button id="collab-btn-close" class="collab-btn">Back</button>
+				</div>
+			</div>
+		`;
 
 		const disconnectClick = () => {
 			this.#sendMsg(CollabMessageType.DISCONNECT);
@@ -419,8 +451,8 @@ class CollaborationManager {
 
 	#renderIncomingInviteBar(msg) {
 		this.#collabBar.innerHTML = `
-            <button id="collab-bar-invite" class="collab-btn btn-success">Peer wants to share!</button>
-        `;
+			<button id="collab-bar-invite" class="collab-btn btn-success">Peer wants to share!</button>
+		`;
 		this.#collabBar.querySelector("#collab-bar-invite").onclick = () => {
 			this.#renderAcceptanceView(msg);
 		};
@@ -436,19 +468,19 @@ class CollaborationManager {
 		const proposedLocalRole = msg.master ? CollabRole.FOLLOWER : CollabRole.MASTER;
 
 		this.#overlay.innerHTML = `
-            <div class="collab-modal">
-                <div class="collab-header">Incoming invitation</div>
-                <div class="collab-row">Peer wants to be: <strong>${proposedRemoteRole}</strong></div>
-                <div class="collab-row">Your assigned role: <strong>${proposedLocalRole}</strong></div>
-                <div class="collab-row">Share ghost cursor: <strong>${msg.shareCursor ? "Yes" : "No"}</strong></div>
-                <div class="collab-row">Follow UI: <strong>${msg.followMode === FollowMode.FOLLOW_ALL ? "Yes" : "No"}</strong></div>
-                <hr>
-                <div class="collab-actions">
-                    <button id="collab-btn-accept" class="collab-btn btn-success">Confirm</button>
-                    <button id="collab-btn-decline" class="collab-btn btn-danger">Decline</button>
-                </div>
-            </div>
-        `;
+			<div class="collab-modal">
+				<div class="collab-header">Incoming invitation</div>
+				<div class="collab-row">Peer wants to be: <strong>${proposedRemoteRole}</strong></div>
+				<div class="collab-row">Your assigned role: <strong>${proposedLocalRole}</strong></div>
+				<div class="collab-row">Share ghost cursor: <strong>${msg.shareCursor ? "Yes" : "No"}</strong></div>
+				<div class="collab-row">Follow UI: <strong>${msg.followMode === FollowMode.FOLLOW_ALL ? "Yes" : "No"}</strong></div>
+				<hr>
+				<div class="collab-actions">
+					<button id="collab-btn-accept" class="collab-btn btn-success">Confirm</button>
+					<button id="collab-btn-decline" class="collab-btn btn-danger">Decline</button>
+				</div>
+			</div>
+		`;
 
 		const acceptClick = () => {
 			this.#currentConfig = {
@@ -465,7 +497,7 @@ class CollaborationManager {
 			this.close();
 
 			if (this.#currentConfig.master) {
-				this.#initiateStateSync();
+				this.forceFullSync();
 			} else {
 				this.#collabBar.innerHTML = `<span class="collab-badge">Waiting for state...</span>`;
 			}
@@ -481,17 +513,6 @@ class CollaborationManager {
 		this.#overlay.querySelector("#collab-btn-decline").onclick = declineClick;
 
 		this.#mainLayout.appendChild(this.#overlay);
-	}
-
-	#initiateStateSync() {
-		const stateSnapshot = globalStore.state;
-		const stateHash = JSON.stringify(stateSnapshot).length;
-
-		this.#sendMsg(CollabMessageType.STATE_SYNC, {
-			state: stateSnapshot,
-			hash: stateHash
-		});
-		this.#collabBar.innerHTML = `<span class="collab-badge">Sending state...</span>`;
 	}
 
 	#finalizeSession() {
@@ -510,6 +531,34 @@ class CollaborationManager {
 		}
 	}
 
+	#getActionHistory() {
+		const root = actions.getHistoryRoot();
+		const nodes = [];
+
+		const collectNodes = (node) => {
+			nodes.push(node.serialize());
+			while(node.children.length === 1){
+				node = node.children[0];
+				nodes.push(node.serialize());
+			}
+			node.children.forEach(child => collectNodes(child));
+		};
+
+		collectNodes(root);
+
+		const current = actions.getCurrentNode();
+		const end = actions.getLastNode();
+
+		return { nodes, current, end };
+	}
+
+	#applyActionHistory(nodes, currentSeqN, endSeqN) {
+		const historyNodes = HistoryNode.deserializeList(nodes);
+		if (historyNodes.length > 0) {
+			actions.replaceHistory(historyNodes, currentSeqN, endSeqN);
+		}
+	}
+
 	#handleDisconnect() {
 		this.#isActive = false;
 		this.#currentConfig = null;
@@ -519,12 +568,19 @@ class CollaborationManager {
 		this.#renderCollabBar();
 	}
 
+	isSharingActive() {
+		return this.#isActive;
+	}
+
+	isMaster() {
+		return this.#currentConfig?.master ?? false;
+	}
 }
 
 const collabPopupManager = new CollaborationManager();
 
-import { gui } from '../gui.js';
+export { collabPopupManager };
+
 gui.registerMenuBtn("collabMenu", "Collab", "Options", (container, state) => {
-	const mainLayout = document.getElementById('mainLayout');
-	collabPopupManager.openMenu(mainLayout);
+	collabPopupManager.openMenu();
 });

@@ -1,4 +1,10 @@
-import { wsConnection } from "./connection.js";
+import {wsConnection} from "./connection.js";
+import {HistoryNode} from "./historyNode.js";
+import {actionPersistence, actions} from './historyStorage.js';
+import {collabPopupManager} from './editor/collabWidget.js'
+import {gui} from "./gui.js";
+import {persistenceManager} from "./persistenceManager.js";
+import {GuiEvents, HistoryEvents, ConnectionEvents} from "./editor/editorEvents.js";
 
 class LayoutSyncCoordinator {
 	#gui;
@@ -12,7 +18,7 @@ class LayoutSyncCoordinator {
 	}
 
 	#attachListeners() {
-		this.#gui.on('mainLayoutResize', ({ width, height }) => {
+		this.#gui.on(GuiEvents.MAIN_LAYOUT_RESIZE, ({width, height}) => {
 			if (this.#connection.getIsMaster()) {
 				//this.#connection.send({ type: "size", width, height });
 			}
@@ -20,12 +26,11 @@ class LayoutSyncCoordinator {
 	}
 }
 
-import {gui} from "./gui.js";
+
 const layoutSync = new LayoutSyncCoordinator(gui, wsConnection);
 
 //////////
 
-import { commandRegistry, actions } from "./actionsHistory.js";
 
 class ActionSyncCoordinator {
 	constructor() {
@@ -33,78 +38,78 @@ class ActionSyncCoordinator {
 		this.#setupNetworkListeners();
 	}
 
-	#setupActionsListeners(){
-		actions.on("commandAdded", (node, {savePersistant})=>{
-			if(savePersistant){
-				this.#persistActionLog(node);
+	#setupActionsListeners() {
+		actions.on(HistoryEvents.COMMAND_ADDED, /** @param {HistoryNode} node
+				@param {{sendWs: boolean, savePersistant: boolean}} */(node, {sendWs, savePersistant}) =>
+		{
+			if (savePersistant) {
+				actionPersistence.saveNode(node);
+				persistenceManager.incrementActionCount();
 			}
-		});
-		actions.on("commandDispatched", (command, {sendWs})=>{
-			if(sendWs){
-				const msg = {type: "action", action_class: command.serializeClass(), data: command.serialize()};
-				if(command.isUiSkip) msg.isUiSkip = true;
+			if (sendWs && collabPopupManager.isSharingActive()) {
+				const msg = {type: "action", data: node.serialize()};
 				wsConnection.sendToPeer(msg);
 			}
 		});
-		actions.on("stepBack", (sendNotif)=>{
-			if(sendNotif){
-				wsConnection.sendToPeer({ type: "replay", actionType: "stepBack" });
+		actions.on(HistoryEvents.STEP_BACK, (sendNotif) => {
+			actionPersistence.saveCurrentSeqN(actions.getCurrentNode().seqN);
+			if (sendNotif && collabPopupManager.isSharingActive()) {
+				wsConnection.sendToPeer({type: "replay", actionType: "stepBack"});
 			}
 		});
-		actions.on("stepForward", (sendNotif)=>{
-			if(sendNotif){
-				wsConnection.sendToPeer({ type: "replay", actionType: "stepForward" });
+		actions.on(HistoryEvents.STEP_FORWARD, (sendNotif) => {
+			actionPersistence.saveCurrentSeqN(actions.getCurrentNode().seqN);
+			if (sendNotif && collabPopupManager.isSharingActive()) {
+				wsConnection.sendToPeer({type: "replay", actionType: "stepForward"});
 			}
 		});
 	}
 
 	#setupNetworkListeners() {
-		wsConnection.on('data', (msg) => {
-			if (msg.type === "action") {
-				const command = commandRegistry.deserialize(msg.action_class, msg.data);
-				if(msg.isUiSkip) command.isUiSkip = true;
-
-				//this.persistToStorage(command);
-				actions.dispatch(command, {sendWs: false, savePersistant: false});
-				this.#persistActionLog(command);
+		wsConnection.on(ConnectionEvents.DATA, (msg) => {
+			if (msg.type === "action" && collabPopupManager.isSharingActive()) {
+				this.#handleReceivedAction(msg.data);
 			}
-			if (msg.type === "replay") {
-				//wsConnection.send({ type: "editor_system", actionType: type });
-				if(msg.actionType === "stepBack"){
+			if (msg.type === "replay" && collabPopupManager.isSharingActive()) {
+				if (msg.actionType === "stepBack") {
 					actions.stepBack(false);
-				}else if(msg.actionType === "stepForward"){
+				} else if (msg.actionType === "stepForward") {
 					actions.stepForward(false);
 				}
 			}
-			//} else if (msg.type === "full_state_sync") {
-			//	this.setState(msg.state);
-			//}
 		});
 	}
 
-	#persistActionLog(node) {
-		const log = JSON.parse(localStorage.getItem("editor_action_stream") || "[]");
-		log.push(node.serialize());
-		localStorage.setItem("editor_action_stream", JSON.stringify(log));
+	#handleReceivedAction(serializedNode) {
+		const current = actions.getCurrentNode();
+
+		if (serializedNode.parId !== current.seqN) {
+			console.warn(`Conflict detected: received node parent (${serializedNode.parId}) != current node (${current.seqN})`);
+
+			if (collabPopupManager.isMaster()) {
+				console.log('Master: Dropping follower action due to conflict - forcing full sync');
+				collabPopupManager.forceFullSync();
+			} else {
+				console.log('Follower: Dropping local action and requesting full sync');
+				collabPopupManager.requestFullSync();
+			}
+			return;
+		}
+
+		const node = HistoryNode.deserialize(serializedNode, current);
+		if (node) {
+			//this.#persistActionLog(node);
+			actionPersistence.saveNode(node);
+			actions.dispatchDeserialized(node);
+		} else {
+			console.warn('Cannot deserialize node - forcing full sync');
+			if (collabPopupManager.isMaster()) {
+				collabPopupManager.forceFullSync();
+			} else {
+				collabPopupManager.requestFullSync();
+			}
+		}
 	}
-
-	/*
-
-	syncWithRemote(type, node) {
-		connection.sendWsData({ type: "editor_transient", actionType: type, seqN: node.seqN, payload: node.command.serialize() });
-	}
-
-	catchUpFromLog(snapshotSeqN) {
-		const log = JSON.parse(localStorage.getItem("editor_action_stream") || "[]");
-		const remainingData = log.filter(actionData => actionData.seqN > snapshotSeqN);
-
-		const reconstructedNodes = HistoryNode.deserializeList(remainingData);
-
-		reconstructedNodes.forEach(node => {
-			node.command?.execute();
-		});
-	}
-*/
 }
 
 const actionSyncCoordinator = new ActionSyncCoordinator();
