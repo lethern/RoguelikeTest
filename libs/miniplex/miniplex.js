@@ -1,5 +1,15 @@
 import {Bucket, OrderedBucket} from "./miniplex-bucket.js";
-import { id } from "./hmans-id.esm.js";
+
+//import { id } from "./hmans-id.esm.js";
+const entityToId = new WeakMap();
+let nextId = 0;
+function id(object) {
+	const id = entityToId.get(object);
+	if (id !== undefined) return id;
+	entityToId.set(object, nextId);
+	return nextId++;
+}
+//
 
 /**
  * @template T
