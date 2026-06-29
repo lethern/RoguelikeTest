@@ -1,6 +1,6 @@
-import EventEmitter from './utils/eventEmitter.js';
-import {CryptoRandom} from './utils/random.js'
-import {ConnectionEvents, ConnectionRTCEvents} from "./editor/editorEvents.js";
+import EventEmitter from "./utils/eventEmitter.js";
+import { CryptoRandom } from "./utils/random.js";
+import { ConnectionEvents, ConnectionRTCEvents } from "./editor/editorEvents.js";
 
 /** @readonly */
 const ConnectionStatus = {
@@ -14,12 +14,12 @@ const ConnectionStatus = {
 
 export const CollabRole = {
 	MASTER: "MASTER",
-	FOLLOWER: "FOLLOWER"
+	FOLLOWER: "FOLLOWER",
 };
 
 export const FollowMode = {
 	FOLLOW_ALL: "FOLLOW_ALL",
-	STATE_ONLY: "STATE_ONLY"
+	STATE_ONLY: "STATE_ONLY",
 };
 
 const textEncoder = new TextEncoder();
@@ -45,14 +45,20 @@ class WSClient extends EventEmitter {
 	#clientId = CryptoRandom.generateId();
 	#isMaster = false;
 
-	constructor(){
+	constructor() {
 		super();
 		this.#setWSStatus(ConnectionStatus.NONE);
 	}
 
-	getMsgCount() { return this.#msgCount; }
-	getByteCount() { return this.#byteCount; }
-	getClientId() { return this.#clientId; }
+	getMsgCount() {
+		return this.#msgCount;
+	}
+	getByteCount() {
+		return this.#byteCount;
+	}
+	getClientId() {
+		return this.#clientId;
+	}
 
 	async connect() {
 		if (this.#wsStatus === ConnectionStatus.CONNECTED) {
@@ -80,10 +86,10 @@ class WSClient extends EventEmitter {
 				this.#reconnectAttempts = 0;
 				this.#setWSStatus(ConnectionStatus.CONNECTED);
 
-				if(this.#pingIntervalId) clearInterval(this.#pingIntervalId);
+				if (this.#pingIntervalId) clearInterval(this.#pingIntervalId);
 				this.#pingIntervalId = setInterval(() => {
 					this.send({ type: "ping", id: this.#clientId });
-				}, 30*1000);
+				}, 30 * 1000);
 
 				this.send({ type: "ping", id: this.#clientId });
 
@@ -107,7 +113,7 @@ class WSClient extends EventEmitter {
 
 				if (!this.#intentionalClose) {
 					const delay = Math.min(10000, 1000 * Math.pow(2, this.#reconnectAttempts++));
-					this.#setWSStatus(ConnectionStatus.TERMINATED, `reconnecting in ${Math.round(delay/1000)}s`);
+					this.#setWSStatus(ConnectionStatus.TERMINATED, `reconnecting in ${Math.round(delay / 1000)}s`);
 					setTimeout(() => this.connect(), delay);
 				} else {
 					this.#setWSStatus(ConnectionStatus.CLOSED);
@@ -121,10 +127,10 @@ class WSClient extends EventEmitter {
 		this.#ws.onmessage = async ({ data }) => {
 			try {
 				this.#msgCount++;
-				this.#byteCount += typeof data === 'string' ? textEncoder.encode(data).length : (data.byteLength || data.size || 0);
+				this.#byteCount += typeof data === "string" ? textEncoder.encode(data).length : data.byteLength || data.size || 0;
 
 				const msg = JSON.parse(data);
-				const stringifiedData = typeof data === 'string' ? data : JSON.stringify(data);
+				const stringifiedData = typeof data === "string" ? data : JSON.stringify(data);
 				this.#log(`WS received: ${stringifiedData?.slice(0, 70)}`);
 
 				if (msg.type === "bye") {
@@ -133,7 +139,7 @@ class WSClient extends EventEmitter {
 					return;
 				}
 
-				if(!msg.server && msg.id && msg.id !== this.#clientId){
+				if (!msg.server && msg.id && msg.id !== this.#clientId) {
 					this.#markPeerActivity(msg.id);
 				}
 
@@ -156,7 +162,7 @@ class WSClient extends EventEmitter {
 
 		const leaderId = allClientIds.reduce((max, id) => (id > max ? id : max));
 
-		const become_master = (this.#clientId === leaderId);
+		const become_master = this.#clientId === leaderId;
 
 		if (this.#isMaster !== become_master) {
 			this.#setMaster(become_master);
@@ -171,8 +177,7 @@ class WSClient extends EventEmitter {
 				//this.#log(`WS sending: ${payload?.slice(0, 70)}`);
 				this.#log(`WS sending: ${payload}`);
 				this.#ws.send(payload);
-			}
-			else if(this.#wsStatus === ConnectionStatus.CONNECTING){
+			} else if (this.#wsStatus === ConnectionStatus.CONNECTING) {
 				this.#wsQueue.push(data);
 			}
 		} catch (e) {
@@ -181,7 +186,7 @@ class WSClient extends EventEmitter {
 	}
 
 	sendToPeer(data) {
-		if(!this.#isPeerConnected) return;
+		if (!this.#isPeerConnected) return;
 
 		this.send(data);
 	}
@@ -207,7 +212,9 @@ class WSClient extends EventEmitter {
 		this.#updateOverallPeerStatus();
 	}
 
-	getIsPeerConnected() { return this.#isPeerConnected; }
+	getIsPeerConnected() {
+		return this.#isPeerConnected;
+	}
 
 	getIsMaster() {
 		return this.#isMaster;
@@ -239,7 +246,7 @@ class WSClient extends EventEmitter {
 
 		if (this.#peers.has(peerId)) {
 			clearTimeout(this.#peers.get(peerId));
-		}else{
+		} else {
 			// new peer
 			this.#log(`Peer connected: ${peerId}`);
 			this.emit(ConnectionEvents.PEER_CONNECTED, peerId);
@@ -251,14 +258,14 @@ class WSClient extends EventEmitter {
 		const timeoutId = setTimeout(() => {
 			this.#log(`Peer timed out: ${peerId}`);
 			this.#peerDisconnected(peerId);
-		}, 40*1000);
+		}, 40 * 1000);
 
 		this.#peers.set(peerId, timeoutId);
 		this.#updateOverallPeerStatus();
 		this.#calculateMaster();
 	}
 
-	#peerDisconnected(peerId){
+	#peerDisconnected(peerId) {
 		this.#peers.delete(peerId);
 		this.emit(ConnectionEvents.PEER_DISCONNECTED, peerId);
 		this.#updateOverallPeerStatus();
@@ -277,7 +284,7 @@ class WSClient extends EventEmitter {
 	}
 
 	#clearPeers() {
-		this.#peers.forEach(timeoutId => clearTimeout(timeoutId));
+		this.#peers.forEach((timeoutId) => clearTimeout(timeoutId));
 		this.#peers.clear();
 
 		if (this.#pingIntervalId) clearInterval(this.#pingIntervalId);
@@ -334,8 +341,12 @@ class RTCClient extends EventEmitter {
 		});
 	}
 
-	getMsgCount() { return this.#msgCount; }
-	getByteCount() { return this.#byteCount; }
+	getMsgCount() {
+		return this.#msgCount;
+	}
+	getByteCount() {
+		return this.#byteCount;
+	}
 
 	async connect(unreliable = false) {
 		if (this.#rtcStatus === ConnectionStatus.CONNECTING || this.#rtcStatus === ConnectionStatus.CONNECTED) {
@@ -358,10 +369,15 @@ class RTCClient extends EventEmitter {
 			}
 
 			if (!this.#rtcChannel || (this.#rtcChannel.readyState !== "open" && this.#rtcChannel.readyState !== "connecting")) {
-				this.#rtcChannel = this.#rtcPeerConn.createDataChannel("gameData", unreliable ? {
-					ordered: false,
-					maxRetransmits: 0,
-				} : {});
+				this.#rtcChannel = this.#rtcPeerConn.createDataChannel(
+					"gameData",
+					unreliable
+						? {
+								ordered: false,
+								maxRetransmits: 0,
+							}
+						: {},
+				);
 				this.#setupDataChannel();
 			}
 		} catch (e) {
@@ -391,7 +407,7 @@ class RTCClient extends EventEmitter {
 		this.#setRTCStatus(ConnectionStatus.CLOSED);
 	}
 
-	clearState(){
+	clearState() {
 		if (this.#rtcChannel) {
 			this.#rtcChannel.onclose = null; // don't trigger recurrent disconnect()
 			this.#rtcChannel.close();
@@ -412,7 +428,7 @@ class RTCClient extends EventEmitter {
 	}
 
 	#resetCredentialsPromise() {
-		this.#credentialsPromise = new Promise(resolve => {
+		this.#credentialsPromise = new Promise((resolve) => {
 			this.#resolveCredentials = resolve;
 		});
 	}
@@ -420,7 +436,7 @@ class RTCClient extends EventEmitter {
 	/** @param {ConnectionStatus} status
 	 * @param {string?} message */
 	#setRTCStatus(status, message = undefined) {
-		if(this.#rtcStatus === status) return;
+		if (this.#rtcStatus === status) return;
 		this.#rtcStatus = status;
 		this.#log(`RTC status: ${status}` + (message ? ", " + message : ""));
 		this.emit(ConnectionRTCEvents.RTC_STATUS, status);
@@ -433,7 +449,7 @@ class RTCClient extends EventEmitter {
 
 		if (msg.type === "offer") {
 			const polite = !this.#wsClient.getIsMaster();
-			const collision = (this.#makingOffer || this.#rtcPeerConn.signalingState !== "stable");
+			const collision = this.#makingOffer || this.#rtcPeerConn.signalingState !== "stable";
 
 			if (collision && polite) {
 				await this.#rtcPeerConn.setLocalDescription(null);
@@ -449,8 +465,7 @@ class RTCClient extends EventEmitter {
 			} catch (e) {
 				this.#error("Failed to process offer", e);
 			}
-		}
-		else if (msg.type === "answer") {
+		} else if (msg.type === "answer") {
 			await this.#rtcPeerConn.setRemoteDescription(msg);
 		} else if (msg.type === "candidate") {
 			try {
@@ -480,12 +495,12 @@ class RTCClient extends EventEmitter {
 			],
 		});
 
-		this.#rtcPeerConn.ondatachannel = e => {
+		this.#rtcPeerConn.ondatachannel = (e) => {
 			this.#rtcChannel = e.channel;
 			this.#setupDataChannel();
 		};
 
-		this.#rtcPeerConn.onicecandidate = e => {
+		this.#rtcPeerConn.onicecandidate = (e) => {
 			if (e.candidate) {
 				this.#wsClient.send({ type: "candidate", candidate: e.candidate });
 			}
@@ -526,19 +541,22 @@ class RTCClient extends EventEmitter {
 	#setupDataChannel() {
 		if (!this.#rtcChannel) return;
 
-		this.#rtcChannel.onmessage = e => {
+		this.#rtcChannel.onmessage = (e) => {
 			this.#msgCount++;
-			this.#byteCount += typeof e.data === 'string' ? textEncoder.encode(e.data).length : (e.data.byteLength || e.data.size || 0);
+			this.#byteCount += typeof e.data === "string" ? textEncoder.encode(e.data).length : e.data.byteLength || e.data.size || 0;
 			this.emit(ConnectionRTCEvents.DATA, e.data);
 		};
-		
+
 		this.#rtcChannel.onopen = () => {
 			this.#msgCount = 0;
 			this.#byteCount = 0;
 			this.#setRTCStatus(ConnectionStatus.CONNECTED);
 		};
-		this.#rtcChannel.onclose = () => { this.clearState(); this.#setRTCStatus(ConnectionStatus.CLOSED); }
-		this.#rtcChannel.onerror = e => this.#error("RTC error", e);
+		this.#rtcChannel.onclose = () => {
+			this.clearState();
+			this.#setRTCStatus(ConnectionStatus.CLOSED);
+		};
+		this.#rtcChannel.onerror = (e) => this.#error("RTC error", e);
 	}
 
 	#log(text) {
@@ -548,4 +566,4 @@ class RTCClient extends EventEmitter {
 
 export const wsConnection = new WSClient();
 export const rtcConnection = new RTCClient(wsConnection);
-export {ConnectionStatus};
+export { ConnectionStatus };

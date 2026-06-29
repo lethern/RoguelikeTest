@@ -1,8 +1,7 @@
-import {globalStore} from "../../globalStore.js";
+import { globalStore } from "../../globalStore.js";
 
-
-class FieldOfView{
-	canSee(observer, target, x, y){
+class FieldOfView {
+	canSee(observer, target, x, y) {
 		return true;
 	}
 

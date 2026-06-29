@@ -1,8 +1,8 @@
-import {globalStore} from "../globalStore.js";
-import {COMPONENTS} from "./data/ecsEnums.js";
+import { globalStore } from "../globalStore.js";
+import { COMPONENTS } from "./data/ecsEnums.js";
 
-export class EditorDevTest{
-	static devTestInit(gameData){
+export class EditorDevTest {
+	static devTestInit(gameData) {
 		//const monster = archetypes.add({
 		//	name: "Monster",
 		//	components: [
@@ -15,26 +15,26 @@ export class EditorDevTest{
 			name: "Player",
 			archetype: "Monster",
 			components: {
-				[COMPONENTS.Position]: {x: 2, y: 2},
-				[COMPONENTS.Health]: {current: 100, max: 100},
-				[COMPONENTS.Timeline]: { isPlayer: true }
-			}
-		})
+				[COMPONENTS.Position]: { x: 2, y: 2 },
+				[COMPONENTS.Health]: { current: 100, max: 100 },
+				[COMPONENTS.Timeline]: { isPlayer: true },
+			},
+		});
 	}
 }
-export class GameDevTest{
-	static devTestInit(gameData){
+export class GameDevTest {
+	static devTestInit(gameData) {
 		globalStore.state.gameSession.currMapId = globalStore.state.editor.currMapId;
 
 		const world = gameData.world;
 		const player = world.add({
 			name: "Gracz",
-			Health: {current: 150, max: 150},
-			Position:{
+			Health: { current: 150, max: 150 },
+			Position: {
 				x: 1,
-				y: 1
+				y: 1,
 			},
-			TimelineTurn: { time: 100, isPlayer: true }
+			TimelineTurn: { time: 100, isPlayer: true },
 		});
 
 		gameData.player = player;

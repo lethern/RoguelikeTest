@@ -1,53 +1,52 @@
-import {CryptoRandom} from "../../utils/random.js";
-
+import { CryptoRandom } from "../../utils/random.js";
 
 export class PrefabStorage {
 	#prefabs = new Map();
 
-	getComponents(id){
+	getComponents(id) {
 		return this.#prefabs.get(id).components;
 	}
 
-	add({name, archetype, components}) {
-		if(!name || !archetype || !components) throw new Error("Missing arg")
+	add({ name, archetype, components }) {
+		if (!name || !archetype || !components) throw new Error("Missing arg");
 
 		const id = this.#generateId();
-		this.#prefabs.set(id, {id, name, archetype, components});
+		this.#prefabs.set(id, { id, name, archetype, components });
 		return id;
 	}
 
-	#generateId(){
+	#generateId() {
 		let id = CryptoRandom.generateId();
-		if(this.#prefabs.has(id)) id = CryptoRandom.generateId();
-		if(this.#prefabs.has(id)) throw new Error("can't get unique id");
+		if (this.#prefabs.has(id)) id = CryptoRandom.generateId();
+		if (this.#prefabs.has(id)) throw new Error("can't get unique id");
 		return id;
 	}
 }
 
-export class DataFactories{
+export class DataFactories {
 	#gameData;
 	constructor(gameData) {
 		this.#gameData = gameData;
 	}
 
-	addEntity({name, prefabId, components= {}}){
-		if(!prefabId || typeof components !== 'object') throw new Error("Bad args");
+	addEntity({ name, prefabId, components = {} }) {
+		if (!prefabId || typeof components !== "object") throw new Error("Bad args");
 
-		const entity = this.#instantiateEntity(name, prefabId, components)
+		const entity = this.#instantiateEntity(name, prefabId, components);
 		this.#gameData.world.add(entity);
 		return entity;
 	}
 
-	addRelation({name, prefabId, components = {}, OwnerId}){
-		if(!prefabId || typeof components !== 'object' || typeof OwnerId !== 'number') throw new Error("Bad args");
+	addRelation({ name, prefabId, components = {}, OwnerId }) {
+		if (!prefabId || typeof components !== "object" || typeof OwnerId !== "number") throw new Error("Bad args");
 
-		const entity = this.#instantiateEntity(name, prefabId, components)
+		const entity = this.#instantiateEntity(name, prefabId, components);
 		entity.OwnerId = OwnerId;
 		this.#gameData.relations.add(entity);
 		return entity;
 	}
 
-	#instantiateEntity(name, prefabId, components){
+	#instantiateEntity(name, prefabId, components) {
 		const prefab = this.#gameData.prefabStorage.getComponents(prefabId);
 
 		const entity = {};

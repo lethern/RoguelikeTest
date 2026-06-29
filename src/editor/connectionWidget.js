@@ -1,14 +1,13 @@
-import {gui} from "../gui.js";
-import { wsConnection, rtcConnection } from '../connection.js';
-import {ConnectionEvents, ConnectionRTCEvents} from "./editorEvents.js";
-import {remoteCursor} from "./remoteCursor.js";
+import { gui } from "../gui.js";
+import { wsConnection, rtcConnection } from "../connection.js";
+import { ConnectionEvents, ConnectionRTCEvents } from "./editorEvents.js";
+import { remoteCursor } from "./remoteCursor.js";
 
 class ConnectionWidget {
 	#connectionBindingsDone = false;
 	#doneInit = false;
 
-	constructor() {
-	}
+	constructor() {}
 
 	#init() {
 		this.logHistory = [];
@@ -16,13 +15,13 @@ class ConnectionWidget {
 		this.#doneInit = true;
 	}
 
-	render(container){
-		if(!this.#doneInit) this.#init();
+	render(container) {
+		if (!this.#doneInit) this.#init();
 
 		this.container = container;
 		const root = container.element;
 
-		remoteCursor.register('connectionWidget');
+		remoteCursor.register("connectionWidget");
 
 		root.innerHTML = `
 		<div class="wl-dashboard">
@@ -80,7 +79,7 @@ class ConnectionWidget {
 		this.rtcStatusLabel.textContent = rtcConnection.getStatus();
 		this.masterStatusLabel.textContent = wsConnection.getIsMaster() ? "YES" : "NO";
 
-		container.on('destroy', () => {
+		container.on("destroy", () => {
 			this.destroy();
 		});
 
@@ -91,9 +90,9 @@ class ConnectionWidget {
 		this.logsDiv.textContent = this.logHistory.join("\n");
 	}
 
-	#bindConnectionWidget(){
-		if(this.#connectionBindingsDone) return;
-		this.#connectionBindingsDone= true;
+	#bindConnectionWidget() {
+		if (this.#connectionBindingsDone) return;
+		this.#connectionBindingsDone = true;
 
 		const logger = (text) => {
 			this.logHistory.push(text);
@@ -125,8 +124,8 @@ class ConnectionWidget {
 			if (msg.type === "chat") {
 				this.addChat("Peer: " + msg.text);
 			} else if (msg.type === "size") {
-				if(!wsConnection.getIsMaster()){
-					const main = document.getElementById('main');
+				if (!wsConnection.getIsMaster()) {
+					const main = document.getElementById("main");
 					main.style.width = msg.width + "px";
 					main.style.height = msg.height + "px";
 				}
@@ -170,11 +169,11 @@ class ConnectionWidget {
 		this.statsIntervalId = setInterval(() => {
 			const wsMsgs = wsConnection.getMsgCount();
 			const wsBytes = wsConnection.getByteCount();
-			const wsAvg = wsMsgs > 0 ? (wsBytes / wsMsgs) : 0;
+			const wsAvg = wsMsgs > 0 ? wsBytes / wsMsgs : 0;
 
 			const rtcMsgs = rtcConnection.getMsgCount();
 			const rtcBytes = rtcConnection.getByteCount();
-			const rtcAvg = rtcMsgs > 0 ? (rtcBytes / rtcMsgs) : 0;
+			const rtcAvg = rtcMsgs > 0 ? rtcBytes / rtcMsgs : 0;
 
 			if (this.wsMsgsLabel) this.wsMsgsLabel.textContent = wsMsgs;
 			if (this.wsVolLabel) this.wsVolLabel.textContent = this.#formatBytes(wsBytes);
@@ -187,15 +186,15 @@ class ConnectionWidget {
 	}
 
 	#formatBytes(bytes) {
-		if (bytes === 0) return '0 B';
+		if (bytes === 0) return "0 B";
 		const k = 1024;
-		const sizes = ['B', 'KB', 'MB'];
+		const sizes = ["B", "KB", "MB"];
 		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 	}
 
 	destroy() {
-		remoteCursor.unregister('connectionWidget');
+		remoteCursor.unregister("connectionWidget");
 		if (this.statsIntervalId) clearInterval(this.statsIntervalId);
 	}
 }
@@ -203,6 +202,6 @@ class ConnectionWidget {
 const connectionWidget = new ConnectionWidget();
 
 gui.registerComponent("connection", "Connection", "Dev", (container, state) => {
-	console.log("open ConnectionWidget")
+	console.log("open ConnectionWidget");
 	connectionWidget.render(container);
 });

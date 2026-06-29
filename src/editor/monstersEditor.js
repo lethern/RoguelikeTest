@@ -1,41 +1,40 @@
-import {BaseCommand, commandRegistry} from './historyNode.js';
-import {editorActions} from './actionsManager.js';
-import {gui} from "../gui.js";
-import {globalStore, GameStateKeys} from "../globalStore.js";
-import {editorEvents, EditorEvents} from './editorEvents.js';
-import {CryptoRandom} from "../utils/random.js";
-
+import { BaseCommand, commandRegistry } from "./historyNode.js";
+import { editorActions } from "./actionsManager.js";
+import { gui } from "../gui.js";
+import { globalStore, GameStateKeys } from "../globalStore.js";
+import { editorEvents, EditorEvents } from "./editorEvents.js";
+import { CryptoRandom } from "../utils/random.js";
 
 class AttributeConfigWidget {
 	constructor() {
 		globalStore.subscribe(GameStateKeys.AttributesConfig, () => this.render());
 	}
 
-	init(container){
+	init(container) {
 		this.container = container;
 
-		container.on('destroy', () => {
+		container.on("destroy", () => {
 			this.destroy();
 		});
 
-		this.element = document.createElement('div');
-		this.element.className = 'rl-editor';
-		this.element.addEventListener('click', this.onClick.bind(this));
-		this.element.addEventListener('change', this.onChange.bind(this));
+		this.element = document.createElement("div");
+		this.element.className = "rl-editor";
+		this.element.addEventListener("click", this.onClick.bind(this));
+		this.element.addEventListener("change", this.onChange.bind(this));
 
 		this.container.element.appendChild(this.element);
 
 		this.render();
 	}
 
-	destroy(){
-		if(this.container) this.container.innerHTML = null;
+	destroy() {
+		if (this.container) this.container.innerHTML = null;
 		this.container = null;
 		this.element = null;
 	}
 
 	render() {
-		if(!this.container) return;
+		if (!this.container) return;
 		const attrs = globalStore.state.attributes;
 		let html = `
 			<div class="rl-header">
@@ -52,9 +51,9 @@ class AttributeConfigWidget {
 					<input type="text" class="rl-input" data-field="id" value="${attr.id}" placeholder="ID" disabled>
 					<input type="text" class="rl-input" data-field="name" value="${attr.name}" placeholder="Name">
 					<select class="rl-select" data-field="type">
-						<option value="single" ${attr.type === 'single' ? 'selected' : ''}>Value</option>
-						<option value="range" ${attr.type === 'range' ? 'selected' : ''}>Range</option>
-						<option value="dice" ${attr.type === 'dice' ? 'selected' : ''}>Dice</option>
+						<option value="single" ${attr.type === "single" ? "selected" : ""}>Value</option>
+						<option value="range" ${attr.type === "range" ? "selected" : ""}>Range</option>
+						<option value="dice" ${attr.type === "dice" ? "selected" : ""}>Dice</option>
 					</select>
 					<button class="rl-btn rl-btn-danger" data-action="remove_attr">Remove</button>
 				</div>
@@ -66,19 +65,19 @@ class AttributeConfigWidget {
 	}
 
 	onClick(e) {
-		if (e.target.dataset.action === 'add_attr') {
+		if (e.target.dataset.action === "add_attr") {
 			const newId = CryptoRandom.generateId();
 			//globalStore.dispatch({ type: "attr_add", id: newId, name: "New Attribute", valType: "single" });
 			editorActions.dispatch(new AttrAddCommand({ id: newId, name: "New Attribute", valType: "single" }));
-		} else if (e.target.dataset.action === 'remove_attr') {
-			const id = e.target.closest('.rl-row').dataset.id;
+		} else if (e.target.dataset.action === "remove_attr") {
+			const id = e.target.closest(".rl-row").dataset.id;
 			//globalStore.dispatch({ type: "attr_remove", id: id });
 		}
 	}
 
 	onChange(e) {
 		if (e.target.dataset.field) {
-			const id = e.target.closest('.rl-row').dataset.id;
+			const id = e.target.closest(".rl-row").dataset.id;
 			const field = e.target.dataset.field;
 			const value = e.target.value;
 			//globalStore.dispatch({ type: "attr_update", id: id, field: field, value: value });
@@ -96,7 +95,7 @@ class AttrAddCommand extends BaseCommand {
 		globalStore.state.attributes[this.data.id] = {
 			id: this.data.id,
 			name: this.data.name,
-			type: this.data.valType
+			type: this.data.valType,
 		};
 		globalStore.notify(GameStateKeys.AttributesConfig);
 	}
@@ -110,8 +109,8 @@ commandRegistry.register(AttrAddCommand);
 class AttrUpdateCommand extends BaseCommand {
 	/**@param {{id: string, field: string, newValue: string, oldValue: string}} data */
 	constructor(data) {
-		if(data.oldValue === undefined)
-			data.oldValue = (globalStore.state.attributes[data.id] ? (globalStore.state.attributes[data.id][data.field] || null): null);
+		if (data.oldValue === undefined)
+			data.oldValue = globalStore.state.attributes[data.id] ? globalStore.state.attributes[data.id][data.field] || null : null;
 		super(data);
 	}
 	execute() {
@@ -130,24 +129,22 @@ class AttrUpdateCommand extends BaseCommand {
 commandRegistry.register(AttrUpdateCommand);
 //#endregion
 
-
 const attributeConfigWidget = new AttributeConfigWidget();
 
 gui.registerComponent("attributeConfig", "Attributes", "Editor", (container, state) => {
-	console.log("open Attributes")
+	console.log("open Attributes");
 	attributeConfigWidget.init(container);
 });
 
-
 function expandHex(hex) {
 	if (hex.length === 4) {
-		return '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+		return "#" + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
 	}
 	return hex;
 }
 
 class EntityAddCommand extends BaseCommand {
-	static friendlyName = 'Add Entity';
+	static friendlyName = "Add Entity";
 	constructor(data) {
 		super(data);
 	}
@@ -157,7 +154,7 @@ class EntityAddCommand extends BaseCommand {
 			id,
 			name,
 			attrs: {},
-			graphicalId
+			graphicalId,
 		};
 		globalStore.notify(GameStateKeys.EntitiesConfig);
 	}
@@ -170,7 +167,7 @@ class EntityAddCommand extends BaseCommand {
 commandRegistry.register(EntityAddCommand);
 
 class GraphicEntityAddCommand extends BaseCommand {
-	static friendlyName = 'Add Graphic Entity';
+	static friendlyName = "Add Graphic Entity";
 	constructor(data) {
 		super(data);
 	}
@@ -179,7 +176,7 @@ class GraphicEntityAddCommand extends BaseCommand {
 		globalStore.state.graphicalEntities[id] = {
 			id,
 			char,
-			color
+			color,
 		};
 		globalStore.notify(GameStateKeys.EntitiesConfig);
 	}
@@ -192,7 +189,7 @@ class GraphicEntityAddCommand extends BaseCommand {
 commandRegistry.register(GraphicEntityAddCommand);
 
 class EntityUpdateCommand extends BaseCommand {
-	static friendlyName = 'Update Entity';
+	static friendlyName = "Update Entity";
 	constructor(data) {
 		if (data.oldValue === undefined) {
 			const entity = globalStore.state[data.category][data.id];
@@ -218,11 +215,11 @@ class EntityUpdateCommand extends BaseCommand {
 commandRegistry.register(EntityUpdateCommand);
 
 class EntityAttributeUpdateCommand extends BaseCommand {
-	static friendlyName = 'Update Entity Attribute';
+	static friendlyName = "Update Entity Attribute";
 	constructor(data) {
 		if (data.oldValue === undefined) {
 			const entity = globalStore.state[data.category][data.id];
-			data.oldValue = (entity && entity.attrs && entity.attrs[data.attrId]) ? entity.attrs[data.attrId].val : null;
+			data.oldValue = entity && entity.attrs && entity.attrs[data.attrId] ? entity.attrs[data.attrId].val : null;
 		}
 		super(data);
 	}
@@ -247,7 +244,7 @@ class EntityAttributeUpdateCommand extends BaseCommand {
 				delete entity.attrs[attrId];
 			} else {
 				const attr = globalStore.state.attributes[attrId];
-				entity.attrs[attrId] = { type: attr ? attr.type : 'single', val: oldValue };
+				entity.attrs[attrId] = { type: attr ? attr.type : "single", val: oldValue };
 			}
 			globalStore.notify(GameStateKeys.EntitiesConfig);
 		}
@@ -256,7 +253,7 @@ class EntityAttributeUpdateCommand extends BaseCommand {
 commandRegistry.register(EntityAttributeUpdateCommand);
 
 class EntityGraphicUpdateCommand extends BaseCommand {
-	static friendlyName = 'Update Entity Graphic';
+	static friendlyName = "Update Entity Graphic";
 	constructor(data) {
 		if (data.oldValue === undefined) {
 			const gTile = globalStore.state.graphicalEntities[data.graphicalId];
@@ -279,7 +276,7 @@ commandRegistry.register(EntityGraphicUpdateCommand);
 
 class EntityEditorWidget {
 	constructor() {
-		this.activeCategory = 'monsters';
+		this.activeCategory = "monsters";
 		this.activeEntityId = null;
 		this.rootElement = null;
 
@@ -289,12 +286,12 @@ class EntityEditorWidget {
 
 	init(container) {
 		this.container = container;
-		this.rootElement = document.createElement('div');
-		this.rootElement.className = 'entity-editor-widget editor-widget editor-panel';
+		this.rootElement = document.createElement("div");
+		this.rootElement.className = "entity-editor-widget editor-widget editor-panel";
 		this.container.element.appendChild(this.rootElement);
 		this.buildUI();
 		this.refreshUI();
-		container.on('destroy', () => this.destroy());
+		container.on("destroy", () => this.destroy());
 	}
 
 	destroy() {
@@ -327,38 +324,48 @@ class EntityEditorWidget {
 			</div>
 		`;
 
-		this.rootElement.querySelector('#catMonsters').addEventListener('click', () => this.setCategory('monsters'));
-		this.rootElement.querySelector('#catItems').addEventListener('click', () => this.setCategory('items'));
-		this.rootElement.querySelector('#catMapObjects').addEventListener('click', () => this.setCategory('mapObjects'));
+		this.rootElement.querySelector("#catMonsters").addEventListener("click", () => this.setCategory("monsters"));
+		this.rootElement.querySelector("#catItems").addEventListener("click", () => this.setCategory("items"));
+		this.rootElement.querySelector("#catMapObjects").addEventListener("click", () => this.setCategory("mapObjects"));
 
-		this.rootElement.querySelector('#btnCreateEntity').addEventListener('click', () => {
-			CryptoRandom.generateId()
+		this.rootElement.querySelector("#btnCreateEntity").addEventListener("click", () => {
+			CryptoRandom.generateId();
 
-			let char = '?';
-			let color = '#ffffff';
-			if (this.activeCategory === 'monsters') { char = 'M'; color = '#f87171'; }
-			else if (this.activeCategory === 'items') { char = 'I'; color = '#fbbf24'; }
-			else if (this.activeCategory === 'mapObjects') { char = 'O'; color = '#34d399'; }
-
+			let char = "?";
+			let color = "#ffffff";
+			if (this.activeCategory === "monsters") {
+				char = "M";
+				color = "#f87171";
+			} else if (this.activeCategory === "items") {
+				char = "I";
+				color = "#fbbf24";
+			} else if (this.activeCategory === "mapObjects") {
+				char = "O";
+				color = "#34d399";
+			}
 
 			const graphicalId = CryptoRandom.generateId();
-			editorActions.dispatch(new GraphicEntityAddCommand({
-				id: graphicalId,
-				char,
-				color
-			}));
+			editorActions.dispatch(
+				new GraphicEntityAddCommand({
+					id: graphicalId,
+					char,
+					color,
+				}),
+			);
 			//////
 			const id = CryptoRandom.generateId();
-			editorActions.dispatch(new EntityAddCommand({
-				category: this.activeCategory,
-				id,
-				name: 'New ' + (this.activeCategory === 'monsters' ? 'Monster' : this.activeCategory === 'items' ? 'Item' : 'Object'),
-				graphicalId
-			}));
+			editorActions.dispatch(
+				new EntityAddCommand({
+					category: this.activeCategory,
+					id,
+					name: "New " + (this.activeCategory === "monsters" ? "Monster" : this.activeCategory === "items" ? "Item" : "Object"),
+					graphicalId,
+				}),
+			);
 			this.selectEntity(id);
 		});
 
-		this.rootElement.querySelector('#searchEntityName').addEventListener('input', () => this.refreshList());
+		this.rootElement.querySelector("#searchEntityName").addEventListener("input", () => this.refreshList());
 		this.updateCategoryButtons();
 	}
 
@@ -370,20 +377,20 @@ class EntityEditorWidget {
 	}
 
 	updateCategoryButtons() {
-		const buttons = this.rootElement.querySelectorAll('.cat-btn');
-		buttons.forEach(btn => {
-			btn.style.background = '#374151';
-			btn.style.color = '#e5e7eb';
-			btn.style.border = 'none';
-			btn.style.padding = '4px 8px';
-			btn.style.cursor = 'pointer';
-			btn.style.borderRadius = '4px';
+		const buttons = this.rootElement.querySelectorAll(".cat-btn");
+		buttons.forEach((btn) => {
+			btn.style.background = "#374151";
+			btn.style.color = "#e5e7eb";
+			btn.style.border = "none";
+			btn.style.padding = "4px 8px";
+			btn.style.cursor = "pointer";
+			btn.style.borderRadius = "4px";
 		});
-		const btnId = this.activeCategory === 'monsters' ? 'catMonsters' : this.activeCategory === 'items' ? 'catItems' : 'catMapObjects';
+		const btnId = this.activeCategory === "monsters" ? "catMonsters" : this.activeCategory === "items" ? "catItems" : "catMapObjects";
 		const activeBtn = this.rootElement.querySelector(`#${btnId}`);
 		if (activeBtn) {
-			activeBtn.style.background = '#2563eb';
-			activeBtn.style.color = 'white';
+			activeBtn.style.background = "#2563eb";
+			activeBtn.style.color = "white";
 		}
 	}
 
@@ -393,26 +400,26 @@ class EntityEditorWidget {
 		if (this.activeEntityId && globalStore.state[this.activeCategory] && globalStore.state[this.activeCategory][this.activeEntityId]) {
 			this.renderEditor(this.activeEntityId);
 		} else {
-			this.rootElement.querySelector('#entityEditor').style.display = 'none';
+			this.rootElement.querySelector("#entityEditor").style.display = "none";
 		}
 	}
 
 	refreshList() {
-		const list = this.rootElement.querySelector('#entityList');
-		list.innerHTML = '';
-		const searchNameEl = this.rootElement.querySelector('#searchEntityName');
-		const nameQuery = searchNameEl ? searchNameEl.value.toLowerCase() : '';
+		const list = this.rootElement.querySelector("#entityList");
+		list.innerHTML = "";
+		const searchNameEl = this.rootElement.querySelector("#searchEntityName");
+		const nameQuery = searchNameEl ? searchNameEl.value.toLowerCase() : "";
 
 		const categoryDict = globalStore.state[this.activeCategory] || {};
-		const filteredEntities = Object.values(categoryDict).filter(ent => {
+		const filteredEntities = Object.values(categoryDict).filter((ent) => {
 			return ent.name.toLowerCase().includes(nameQuery);
 		});
 
 		filteredEntities.sort((a, b) => {
-			const aParts = a.id.split('_');
-			const bParts = b.id.split('_');
-			const aTime = aParts.length > 1 ? (parseInt(aParts[1], 10) || 0) : 0;
-			const bTime = bParts.length > 1 ? (parseInt(bParts[1], 10) || 0) : 0;
+			const aParts = a.id.split("_");
+			const bParts = b.id.split("_");
+			const aTime = aParts.length > 1 ? parseInt(aParts[1], 10) || 0 : 0;
+			const bTime = bParts.length > 1 ? parseInt(bParts[1], 10) || 0 : 0;
 			if (aTime !== bTime) {
 				return bTime - aTime;
 			}
@@ -426,52 +433,52 @@ class EntityEditorWidget {
 	}
 
 	#drawListElem(ent) {
-		const item = document.createElement('div');
-		item.className = 'tile-list-item';
+		const item = document.createElement("div");
+		item.className = "tile-list-item";
 		if (ent.id === this.activeEntityId) {
-			item.classList.add('active');
+			item.classList.add("active");
 		}
 
-		const canvas = document.createElement('canvas');
+		const canvas = document.createElement("canvas");
 		canvas.width = 18;
 		canvas.height = 18;
-		canvas.style.flexShrink = '0';
-		const ctx = canvas.getContext('2d');
+		canvas.style.flexShrink = "0";
+		const ctx = canvas.getContext("2d");
 
 		const graphicalId = ent.graphicalId || ent.id;
-		const gTile = globalStore.state.graphicalEntities[graphicalId] || { char: '?', color: '#FFF' };
+		const gTile = globalStore.state.graphicalEntities[graphicalId] || { char: "?", color: "#FFF" };
 
 		ctx.fillStyle = gTile.color;
-		ctx.font = '14px monospace';
-		ctx.textAlign = 'center';
-		ctx.textBaseline = 'middle';
+		ctx.font = "14px monospace";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
 		ctx.fillText(gTile.char, canvas.width / 2, canvas.height / 2);
 
-		const label = document.createElement('span');
+		const label = document.createElement("span");
 		label.textContent = ent.name;
 
 		item.appendChild(canvas);
 		item.appendChild(label);
 
-		item.addEventListener('click', () => this.selectEntity(ent.id));
+		item.addEventListener("click", () => this.selectEntity(ent.id));
 
 		return item;
 	}
 
 	selectEntity(id) {
 		this.activeEntityId = id;
-		editorEvents.emit(EditorEvents.ENTITY_SELECTED, {category: this.activeCategory, id});
+		editorEvents.emit(EditorEvents.ENTITY_SELECTED, { category: this.activeCategory, id });
 		this.refreshUI();
 	}
 
 	renderEditor(id) {
 		const ent = globalStore.state[this.activeCategory][id];
-		const editor = this.rootElement.querySelector('#entityEditor');
-		const props = this.rootElement.querySelector('#entityPropertiesPanel');
-		editor.style.display = 'block';
+		const editor = this.rootElement.querySelector("#entityEditor");
+		const props = this.rootElement.querySelector("#entityPropertiesPanel");
+		editor.style.display = "block";
 
 		const graphicalId = ent.graphicalId || id;
-		const gTile = globalStore.state.graphicalEntities[graphicalId] || {char: '?', color: '#ffffff'};
+		const gTile = globalStore.state.graphicalEntities[graphicalId] || { char: "?", color: "#ffffff" };
 
 		let html = `
 			<div><label>Name: <input type="text" id="entName" value="${ent.name}"></label></div>
@@ -484,12 +491,12 @@ class EntityEditorWidget {
 		const allAttributes = Object.values(globalStore.state.attributes);
 		for (const attr of allAttributes) {
 			const hasAttr = ent.attrs && ent.attrs[attr.id] !== undefined;
-			const attrVal = hasAttr ? ent.attrs[attr.id].val : '';
+			const attrVal = hasAttr ? ent.attrs[attr.id].val : "";
 			html += `
 				<div style="display: flex; align-items: center; gap: 8px;">
-					<input type="checkbox" class="attr-enable" data-attr-id="${attr.id}" ${hasAttr ? 'checked' : ''}>
+					<input type="checkbox" class="attr-enable" data-attr-id="${attr.id}" ${hasAttr ? "checked" : ""}>
 					<span style="flex: 1; font-size: 13px;">${attr.name} (${attr.type})</span>
-					<input type="text" class="attr-val-input" data-attr-id="${attr.id}" data-attr-type="${attr.type}" value="${attrVal}" style="width: 100px;" ${hasAttr ? '' : 'disabled'}>
+					<input type="text" class="attr-val-input" data-attr-id="${attr.id}" data-attr-type="${attr.type}" value="${attrVal}" style="width: 100px;" ${hasAttr ? "" : "disabled"}>
 				</div>
 			`;
 		}
@@ -513,58 +520,64 @@ class EntityEditorWidget {
 		html += `</div>`;
 		props.innerHTML = html;
 
-		props.querySelector('#entName').addEventListener('change', (e) => {
-			editorActions.dispatch(new EntityUpdateCommand({category: this.activeCategory, id, field: 'name', newValue: e.target.value}));
+		props.querySelector("#entName").addEventListener("change", (e) => {
+			editorActions.dispatch(new EntityUpdateCommand({ category: this.activeCategory, id, field: "name", newValue: e.target.value }));
 		});
 
-		props.querySelector('#entChar').addEventListener('change', (e) => {
-			const val = e.target.value || '?';
-			editorActions.dispatch(new EntityGraphicUpdateCommand({graphicalId, field: 'char', newValue: val}));
+		props.querySelector("#entChar").addEventListener("change", (e) => {
+			const val = e.target.value || "?";
+			editorActions.dispatch(new EntityGraphicUpdateCommand({ graphicalId, field: "char", newValue: val }));
 		});
 
-		props.querySelector('#entColor').addEventListener('change', (e) => {
-			editorActions.dispatch(new EntityGraphicUpdateCommand({graphicalId, field: 'color', newValue: e.target.value}));
+		props.querySelector("#entColor").addEventListener("change", (e) => {
+			editorActions.dispatch(new EntityGraphicUpdateCommand({ graphicalId, field: "color", newValue: e.target.value }));
 		});
 
-		props.querySelectorAll('.attr-enable').forEach(checkbox => {
-			checkbox.addEventListener('change', (e) => {
+		props.querySelectorAll(".attr-enable").forEach((checkbox) => {
+			checkbox.addEventListener("change", (e) => {
 				const attrId = e.target.dataset.attrId;
 				const attr = globalStore.state.attributes[attrId];
 				const valInput = props.querySelector(`.attr-val-input[data-attr-id="${attrId}"]`);
-				const valType = attr ? attr.type : (ent.attrs[attrId]?.type || 'single');
+				const valType = attr ? attr.type : ent.attrs[attrId]?.type || "single";
 				if (e.target.checked) {
 					valInput.disabled = false;
-					editorActions.dispatch(new EntityAttributeUpdateCommand({
-						category: this.activeCategory,
-						id,
-						attrId,
-						valType,
-						newValue: valInput.value || '10'
-					}));
+					editorActions.dispatch(
+						new EntityAttributeUpdateCommand({
+							category: this.activeCategory,
+							id,
+							attrId,
+							valType,
+							newValue: valInput.value || "10",
+						}),
+					);
 				} else {
 					valInput.disabled = true;
-					editorActions.dispatch(new EntityAttributeUpdateCommand({
-						category: this.activeCategory,
-						id,
-						attrId,
-						valType,
-						newValue: null
-					}));
+					editorActions.dispatch(
+						new EntityAttributeUpdateCommand({
+							category: this.activeCategory,
+							id,
+							attrId,
+							valType,
+							newValue: null,
+						}),
+					);
 				}
 			});
 		});
 
-		props.querySelectorAll('.attr-val-input').forEach(input => {
-			input.addEventListener('change', (e) => {
+		props.querySelectorAll(".attr-val-input").forEach((input) => {
+			input.addEventListener("change", (e) => {
 				const attrId = e.target.dataset.attrId;
 				const valType = e.target.dataset.attrType;
-				editorActions.dispatch(new EntityAttributeUpdateCommand({
-					category: this.activeCategory,
-					id,
-					attrId,
-					valType,
-					newValue: e.target.value
-				}));
+				editorActions.dispatch(
+					new EntityAttributeUpdateCommand({
+						category: this.activeCategory,
+						id,
+						attrId,
+						valType,
+						newValue: e.target.value,
+					}),
+				);
 			});
 		});
 
@@ -572,16 +585,16 @@ class EntityEditorWidget {
 	}
 
 	drawCanvas(graphicalId) {
-		const canvas = this.rootElement.querySelector('#entityCanvas');
+		const canvas = this.rootElement.querySelector("#entityCanvas");
 		if (!canvas) return;
-		const ctx = canvas.getContext('2d');
-		ctx.fillStyle = '#222';
+		const ctx = canvas.getContext("2d");
+		ctx.fillStyle = "#222";
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
-		const gTile = graphicalId ? globalStore.state.graphicalEntities[graphicalId] : {char: '?', color: '#FFF'};
+		const gTile = graphicalId ? globalStore.state.graphicalEntities[graphicalId] : { char: "?", color: "#FFF" };
 		ctx.fillStyle = gTile.color;
-		ctx.font = '32px monospace';
-		ctx.textAlign = 'center';
-		ctx.textBaseline = 'middle';
+		ctx.font = "32px monospace";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
 		ctx.fillText(gTile.char, canvas.width / 2, canvas.height / 2);
 	}
 }

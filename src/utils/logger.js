@@ -1,10 +1,10 @@
-import { config } from '../config.js';
+import { config } from "../config.js";
 
 const LoggerConfig = Object.freeze({
 	ENABLE_LOGGING: "ENABLE_LOGGING",
 });
 
-config.addConfigVar(LoggerConfig.ENABLE_LOGGING, true, 'Enable custom logging', 'enableLogging', 'Logger');
+config.addConfigVar(LoggerConfig.ENABLE_LOGGING, true, "Enable custom logging", "enableLogging", "Logger");
 
 class Logger {
 	#logs = [];

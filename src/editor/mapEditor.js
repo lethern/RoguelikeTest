@@ -1,26 +1,26 @@
-import {gui} from "../gui.js";
-import {BaseCommand, commandRegistry} from './historyNode.js';
-import {editorActions} from './actionsManager.js';
-import {GameStateKeys, globalStore} from "../globalStore.js";
-import {config} from "../config.js";
-import {CryptoRandom} from '../utils/random.js';
-import {editorEvents, EditorEvents} from './editorEvents.js';
+import { gui } from "../gui.js";
+import { BaseCommand, commandRegistry } from "./historyNode.js";
+import { editorActions } from "./actionsManager.js";
+import { GameStateKeys, globalStore } from "../globalStore.js";
+import { config } from "../config.js";
+import { CryptoRandom } from "../utils/random.js";
+import { editorEvents, EditorEvents } from "./editorEvents.js";
 
 const MapEditorConfig = Object.freeze({
 	MAP_EDITOR_TILE_SIZE: "MAP_EDITOR_TILE_SIZE",
 });
-config.addConfigVar(MapEditorConfig.MAP_EDITOR_TILE_SIZE, 16, 'Size of each rendered map tile in pixels', 'tileSize', 'MapEditorConfig');
+config.addConfigVar(MapEditorConfig.MAP_EDITOR_TILE_SIZE, 16, "Size of each rendered map tile in pixels", "tileSize", "MapEditorConfig");
 
 //#region commands
 function expandHex(hex) {
 	if (hex.length === 4) {
-		return '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+		return "#" + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
 	}
 	return hex;
 }
 
 class TileGraphicUpdateCommand extends BaseCommand {
-	static friendlyName = 'Update Tile Graphic';
+	static friendlyName = "Update Tile Graphic";
 	constructor(data) {
 		if (data.oldValue === undefined) {
 			const gTile = globalStore.state.graphicalTiles[data.graphicalId];
@@ -30,7 +30,7 @@ class TileGraphicUpdateCommand extends BaseCommand {
 	}
 	execute() {
 		if (!globalStore.state.graphicalTiles[this.data.graphicalId]) {
-			globalStore.state.graphicalTiles[this.data.graphicalId] = { char: '?', color: '#ffffff' };
+			globalStore.state.graphicalTiles[this.data.graphicalId] = { char: "?", color: "#ffffff" };
 		}
 		globalStore.state.graphicalTiles[this.data.graphicalId][this.data.field] = this.data.newValue;
 		globalStore.notify(GameStateKeys.TileDictionary);
@@ -45,7 +45,7 @@ class TileGraphicUpdateCommand extends BaseCommand {
 commandRegistry.register(TileGraphicUpdateCommand);
 
 class TileEntryAddCommand extends BaseCommand {
-	static friendlyName = 'Tile Add';
+	static friendlyName = "Tile Add";
 	constructor(data) {
 		super(data);
 	}
@@ -58,12 +58,12 @@ class TileEntryAddCommand extends BaseCommand {
 			defaultSpawns: this.data.defaultSpawns || [],
 			flags: this.data.flags || {},
 			tags: this.data.tags || [],
-			graphicalId: this.data.graphicalId || this.data.id
+			graphicalId: this.data.graphicalId || this.data.id,
 		};
 		if (!globalStore.state.graphicalTiles[this.data.id]) {
 			globalStore.state.graphicalTiles[this.data.id] = {
-				char: '?',
-				color: '#ffffff'
+				char: "?",
+				color: "#ffffff",
 			};
 		}
 		globalStore.notify(GameStateKeys.TileDictionary);
@@ -76,7 +76,7 @@ class TileEntryAddCommand extends BaseCommand {
 commandRegistry.register(TileEntryAddCommand);
 
 class TileEntryUpdateCommand extends BaseCommand {
-	static friendlyName = 'Tile Update';
+	static friendlyName = "Tile Update";
 	constructor(data) {
 		if (data.oldValue === undefined) {
 			const entry = globalStore.state.tileDictionary[data.id];
@@ -100,20 +100,18 @@ class TileEntryUpdateCommand extends BaseCommand {
 commandRegistry.register(TileEntryUpdateCommand);
 
 class MapPaintEntityCommand extends BaseCommand {
-	static friendlyName = 'Paint Entity';
+	static friendlyName = "Paint Entity";
 	constructor(data) {
 		super(data);
 	}
 
 	canAppend(baseConfig, maxItems) {
-		return this.data.mapId === baseConfig.mapId &&
-			this.data.entityId === baseConfig.entityId &&
-			this.data.paints.length < maxItems;
+		return this.data.mapId === baseConfig.mapId && this.data.entityId === baseConfig.entityId && this.data.paints.length < maxItems;
 	}
 
 	appendAndExecute(paintItem) {
 		const arr = globalStore.state.mapEntities[this.data.mapId];
-		const idx = arr.findIndex(e => e.x === paintItem.x && e.y === paintItem.y && e.entityId === this.data.entityId);
+		const idx = arr.findIndex((e) => e.x === paintItem.x && e.y === paintItem.y && e.entityId === this.data.entityId);
 
 		if (idx > -1) {
 			arr.splice(idx, 1);
@@ -131,7 +129,7 @@ class MapPaintEntityCommand extends BaseCommand {
 		const arr = globalStore.state.mapEntities[this.data.mapId];
 
 		for (const p of this.data.paints) {
-			const idx = arr.findIndex(e => e.x === p.x && e.y === p.y && e.entityId === this.data.entityId);
+			const idx = arr.findIndex((e) => e.x === p.x && e.y === p.y && e.entityId === this.data.entityId);
 			if (idx > -1) {
 				arr.splice(idx, 1);
 				p.wasAdded = false;
@@ -149,7 +147,7 @@ class MapPaintEntityCommand extends BaseCommand {
 		for (let i = this.data.paints.length - 1; i >= 0; i--) {
 			const p = this.data.paints[i];
 			if (p.wasAdded) {
-				const idx = arr.findIndex(e => e.x === p.x && e.y === p.y && e.entityId === this.data.entityId);
+				const idx = arr.findIndex((e) => e.x === p.x && e.y === p.y && e.entityId === this.data.entityId);
 				if (idx > -1) arr.splice(idx, 1);
 			} else {
 				arr.push({ x: p.x, y: p.y, entityId: this.data.entityId });
@@ -161,15 +159,13 @@ class MapPaintEntityCommand extends BaseCommand {
 commandRegistry.register(MapPaintEntityCommand);
 
 class MapPaintTileCommand extends BaseCommand {
-	static friendlyName = 'Paint Tile';
+	static friendlyName = "Paint Tile";
 	constructor(data) {
 		super(data);
 	}
 
 	canAppend(baseConfig, maxItems) {
-		return this.data.mapId === baseConfig.mapId &&
-			this.data.tileId === baseConfig.tileId &&
-			this.data.paints.length < maxItems;
+		return this.data.mapId === baseConfig.mapId && this.data.tileId === baseConfig.tileId && this.data.paints.length < maxItems;
 	}
 
 	appendAndExecute(paintItem) {
@@ -210,7 +206,7 @@ class MapPaintTileCommand extends BaseCommand {
 commandRegistry.register(MapPaintTileCommand);
 
 class MapResizeCommand extends BaseCommand {
-	static friendlyName = 'Resize Map';
+	static friendlyName = "Resize Map";
 	constructor(data) {
 		if (data.oldWidth === undefined) {
 			const map = globalStore.state.maps[data.mapId];
@@ -258,7 +254,7 @@ class MapResizeCommand extends BaseCommand {
 commandRegistry.register(MapResizeCommand);
 
 class MapUpdateCommand extends BaseCommand {
-	static friendlyName = 'Map Update';
+	static friendlyName = "Map Update";
 	constructor(data) {
 		if (data.oldValue === undefined) {
 			const map = globalStore.state.maps[data.mapId];
@@ -283,11 +279,10 @@ class MapUpdateCommand extends BaseCommand {
 }
 commandRegistry.register(MapUpdateCommand);
 
-
 class MapSwitchCommand extends BaseCommand {
-	static friendlyName = 'Switch Map';
+	static friendlyName = "Switch Map";
 	constructor(data) {
-		if(data.oldMapId === undefined){
+		if (data.oldMapId === undefined) {
 			data.oldMapId = globalStore.state.editor.currMapId;
 		}
 		super(data);
@@ -304,7 +299,7 @@ class MapSwitchCommand extends BaseCommand {
 commandRegistry.register(MapSwitchCommand);
 
 class MapCreateCommand extends BaseCommand {
-	static friendlyName = 'New Map';
+	static friendlyName = "New Map";
 	constructor(data) {
 		super(data);
 	}
@@ -323,7 +318,7 @@ class MapCreateCommand extends BaseCommand {
 			name: this.data.name,
 			width: this.data.width,
 			height: this.data.height,
-			tiles: tiles
+			tiles: tiles,
 		};
 		globalStore.state.mapEntities[this.data.mapId] = [];
 		globalStore.notify(GameStateKeys.Maps);
@@ -352,12 +347,12 @@ class TileDictionaryWidget {
 
 	init(container) {
 		this.container = container;
-		this.rootElement = document.createElement('div');
-		this.rootElement.className = 'tile-dict-widget editor-widget editor-panel';
+		this.rootElement = document.createElement("div");
+		this.rootElement.className = "tile-dict-widget editor-widget editor-panel";
 		this.container.element.appendChild(this.rootElement);
 		this.buildUI();
 		this.refreshList();
-		container.on('destroy', () => this.destroy());
+		container.on("destroy", () => this.destroy());
 	}
 
 	destroy() {
@@ -384,33 +379,33 @@ class TileDictionaryWidget {
 			</div>
 		`;
 
-		this.rootElement.querySelector('#btnCreate').addEventListener('click', () => {
-			const id = 'tile_' + Date.now();
-			editorActions.dispatch(new TileEntryAddCommand({id: id, name: 'New Tile'}));
+		this.rootElement.querySelector("#btnCreate").addEventListener("click", () => {
+			const id = "tile_" + Date.now();
+			editorActions.dispatch(new TileEntryAddCommand({ id: id, name: "New Tile" }));
 		});
 
-		this.rootElement.querySelector('#searchName').addEventListener('input', () => this.refreshList());
-		this.rootElement.querySelector('#searchTag').addEventListener('input', () => this.refreshList());
+		this.rootElement.querySelector("#searchName").addEventListener("input", () => this.refreshList());
+		this.rootElement.querySelector("#searchTag").addEventListener("input", () => this.refreshList());
 	}
 
 	refreshList() {
-		if(!this.rootElement) return;
-		const list = this.rootElement.querySelector('#tileList');
-		list.innerHTML = '';
-		const nameQuery = this.rootElement.querySelector('#searchName').value.toLowerCase();
-		const tagQuery = this.rootElement.querySelector('#searchTag').value.toLowerCase();
+		if (!this.rootElement) return;
+		const list = this.rootElement.querySelector("#tileList");
+		list.innerHTML = "";
+		const nameQuery = this.rootElement.querySelector("#searchName").value.toLowerCase();
+		const tagQuery = this.rootElement.querySelector("#searchTag").value.toLowerCase();
 
-		const filteredTiles = Object.values(globalStore.state.tileDictionary).filter(tile => {
+		const filteredTiles = Object.values(globalStore.state.tileDictionary).filter((tile) => {
 			const matchesName = tile.name.toLowerCase().includes(nameQuery);
-			const matchesTag = !tagQuery || tile.tags.some(t => t.toLowerCase().includes(tagQuery));
+			const matchesTag = !tagQuery || tile.tags.some((t) => t.toLowerCase().includes(tagQuery));
 			return matchesName && matchesTag;
 		});
 
 		filteredTiles.sort((a, b) => {
-			const aParts = a.id.split('_');
-			const bParts = b.id.split('_');
-			const aTime = aParts.length > 1 ? (parseInt(aParts[1], 10) || 0) : 0;
-			const bTime = bParts.length > 1 ? (parseInt(bParts[1], 10) || 0) : 0;
+			const aParts = a.id.split("_");
+			const bParts = b.id.split("_");
+			const aTime = aParts.length > 1 ? parseInt(aParts[1], 10) || 0 : 0;
+			const bTime = bParts.length > 1 ? parseInt(bParts[1], 10) || 0 : 0;
 			if (aTime !== bTime) {
 				return bTime - aTime;
 			}
@@ -425,40 +420,40 @@ class TileDictionaryWidget {
 		if (this.activeTileId && globalStore.state.tileDictionary[this.activeTileId]) {
 			this.renderEditor(this.activeTileId);
 		} else {
-			this.rootElement.querySelector('#tileEditor').style.display = 'none';
+			this.rootElement.querySelector("#tileEditor").style.display = "none";
 		}
 	}
 
 	#drawListElem(tile) {
-		const item = document.createElement('div');
-		item.className = 'tile-list-item';
+		const item = document.createElement("div");
+		item.className = "tile-list-item";
 
 		if (tile.id === this.activeTileId) {
-			item.classList.add('active');
+			item.classList.add("active");
 		}
 
-		const canvas = document.createElement('canvas');
+		const canvas = document.createElement("canvas");
 		canvas.width = 18;
 		canvas.height = 18;
-		const ctx = canvas.getContext('2d');
+		const ctx = canvas.getContext("2d");
 
 		const graphicalId = tile.graphicalId;
-		const gTile = graphicalId ? globalStore.state.graphicalTiles[graphicalId] : { char: '?', color: '#FFF' };
+		const gTile = graphicalId ? globalStore.state.graphicalTiles[graphicalId] : { char: "?", color: "#FFF" };
 
 		if (isCloseToGray(gTile.color)) {
-			ctx.fillStyle = '#000';
+			ctx.fillStyle = "#000";
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
 		}
 
 		this.drawTile(canvas, ctx, gTile, 14);
 
-		const label = document.createElement('span');
+		const label = document.createElement("span");
 		label.textContent = tile.name;
 
 		item.appendChild(canvas);
 		item.appendChild(label);
 
-		item.addEventListener('click', () => this.selectTile(tile.id));
+		item.addEventListener("click", () => this.selectTile(tile.id));
 
 		return item;
 
@@ -467,27 +462,26 @@ class TileDictionaryWidget {
 			if (!match) return false;
 			let hex = match[1];
 			if (hex.length === 3) {
-				hex = hex.split('').map(c => c + c).join('');
+				hex = hex
+					.split("")
+					.map((c) => c + c)
+					.join("");
 			}
 			const r = parseInt(hex.slice(0, 2), 16);
 			const g = parseInt(hex.slice(2, 4), 16);
 			const b = parseInt(hex.slice(4, 6), 16);
 
 			const target = 61;
-			const distance = Math.sqrt(
-				(r - target) ** 2 +
-				(g - target) ** 2 +
-				(b - target) ** 2
-			);
+			const distance = Math.sqrt((r - target) ** 2 + (g - target) ** 2 + (b - target) ** 2);
 			return distance < 60;
 		}
 	}
 
-	drawTile(canvas, ctx, gTile, size){
+	drawTile(canvas, ctx, gTile, size) {
 		ctx.fillStyle = gTile.color;
-		ctx.font = size+'px monospace';
-		ctx.textAlign = 'center';
-		ctx.textBaseline = 'middle';
+		ctx.font = size + "px monospace";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
 		ctx.fillText(gTile.char, canvas.width / 2, canvas.height / 2);
 	}
 
@@ -499,58 +493,61 @@ class TileDictionaryWidget {
 
 	renderEditor(id) {
 		const tile = globalStore.state.tileDictionary[id];
-		const editor = this.rootElement.querySelector('#tileEditor');
-		const props = this.rootElement.querySelector('#propertiesPanel');
-		editor.style.display = 'block';
+		const editor = this.rootElement.querySelector("#tileEditor");
+		const props = this.rootElement.querySelector("#propertiesPanel");
+		editor.style.display = "block";
 
 		const graphicalId = tile.graphicalId || id;
-		const gTile = globalStore.state.graphicalTiles[graphicalId] || {char: '?', color: '#ffffff'};
+		const gTile = globalStore.state.graphicalTiles[graphicalId] || { char: "?", color: "#ffffff" };
 
 		props.innerHTML = `
 			<div><label>Name: <input type="text" id="propName" value="${tile.name}"></label></div>
-			<div><label>Blocks Movement: <input type="checkbox" id="propBlocksMovement" ${tile.blocksMovement ? 'checked' : ''}></label></div>
-			<div><label>Blocks Vision: <input type="checkbox" id="propBlocksVision" ${tile.blocksVision ? 'checked' : ''}></label></div>
-			<div><label>Tags (comma separated): <input type="text" id="propTags" value="${tile.tags.join(', ')}"></label></div>
+			<div><label>Blocks Movement: <input type="checkbox" id="propBlocksMovement" ${tile.blocksMovement ? "checked" : ""}></label></div>
+			<div><label>Blocks Vision: <input type="checkbox" id="propBlocksVision" ${tile.blocksVision ? "checked" : ""}></label></div>
+			<div><label>Tags (comma separated): <input type="text" id="propTags" value="${tile.tags.join(", ")}"></label></div>
 			<div><label>Char (1-char): <input type="text" id="propChar" maxlength="1" value="${gTile.char}" style="width: 30px; text-align: center;"></label></div>
 			<div><label>Color: <input type="color" id="propColor" value="${gTile.color.length === 4 ? expandHex(gTile.color) : gTile.color}"></label></div>
 		`;
 
-		props.querySelector('#propName').addEventListener('change', (e) => {
-			editorActions.dispatch(new TileEntryUpdateCommand({id, field: 'name', newValue: e.target.value}));
+		props.querySelector("#propName").addEventListener("change", (e) => {
+			editorActions.dispatch(new TileEntryUpdateCommand({ id, field: "name", newValue: e.target.value }));
 		});
 
-		props.querySelector('#propBlocksMovement').addEventListener('change', (e) => {
-			editorActions.dispatch(new TileEntryUpdateCommand({id, field: 'blocksMovement', newValue: e.target.checked}));
+		props.querySelector("#propBlocksMovement").addEventListener("change", (e) => {
+			editorActions.dispatch(new TileEntryUpdateCommand({ id, field: "blocksMovement", newValue: e.target.checked }));
 		});
 
-		props.querySelector('#propBlocksVision').addEventListener('change', (e) => {
-			editorActions.dispatch(new TileEntryUpdateCommand({id, field: 'blocksVision', newValue: e.target.checked}));
+		props.querySelector("#propBlocksVision").addEventListener("change", (e) => {
+			editorActions.dispatch(new TileEntryUpdateCommand({ id, field: "blocksVision", newValue: e.target.checked }));
 		});
 
-		props.querySelector('#propTags').addEventListener('change', (e) => {
-			const newTags = e.target.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
-			editorActions.dispatch(new TileEntryUpdateCommand({id, field: 'tags', newValue: newTags}));
+		props.querySelector("#propTags").addEventListener("change", (e) => {
+			const newTags = e.target.value
+				.split(",")
+				.map((t) => t.trim())
+				.filter((t) => t.length > 0);
+			editorActions.dispatch(new TileEntryUpdateCommand({ id, field: "tags", newValue: newTags }));
 		});
 
-		props.querySelector('#propChar').addEventListener('change', (e) => {
-			const val = e.target.value || '?';
-			editorActions.dispatch(new TileGraphicUpdateCommand({graphicalId, field: 'char', newValue: val}));
+		props.querySelector("#propChar").addEventListener("change", (e) => {
+			const val = e.target.value || "?";
+			editorActions.dispatch(new TileGraphicUpdateCommand({ graphicalId, field: "char", newValue: val }));
 		});
 
-		props.querySelector('#propColor').addEventListener('change', (e) => {
-			editorActions.dispatch(new TileGraphicUpdateCommand({graphicalId, field: 'color', newValue: e.target.value}));
+		props.querySelector("#propColor").addEventListener("change", (e) => {
+			editorActions.dispatch(new TileGraphicUpdateCommand({ graphicalId, field: "color", newValue: e.target.value }));
 		});
 
 		this.drawCanvas(graphicalId);
 	}
 
 	drawCanvas(graphicalId) {
-		const canvas = this.rootElement.querySelector('#tileCanvas');
-		const ctx = canvas.getContext('2d');
-		ctx.fillStyle = '#222';
+		const canvas = this.rootElement.querySelector("#tileCanvas");
+		const ctx = canvas.getContext("2d");
+		ctx.fillStyle = "#222";
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
-		const gTile = graphicalId ? globalStore.state.graphicalTiles[graphicalId] : {char: '?', color: '#FFF'};
-		this.drawTile(canvas, ctx, gTile, 32)
+		const gTile = graphicalId ? globalStore.state.graphicalTiles[graphicalId] : { char: "?", color: "#FFF" };
+		this.drawTile(canvas, ctx, gTile, 32);
 	}
 }
 
@@ -559,23 +556,23 @@ class MapPropertiesComponent {
 		globalStore.subscribe(GameStateKeys.Maps, () => this.refreshUI());
 		globalStore.subscribe(GameStateKeys.EditorCurrMap, () => {
 			this.refreshUI();
-			if (this.rootElement && this.mode === 'list') this.renderMapList();
+			if (this.rootElement && this.mode === "list") this.renderMapList();
 		});
 		globalStore.subscribe(GameStateKeys.MapListChanged, () => {
-			if (this.rootElement && this.mode === 'list') this.renderMapList();
+			if (this.rootElement && this.mode === "list") this.renderMapList();
 		});
 		this.rootElement = null;
-		this.mode = 'edit';
+		this.mode = "edit";
 	}
 
 	init(container) {
 		this.container = container;
-		this.rootElement = document.createElement('div');
-		this.rootElement.className = 'map-props-widget editor-panel';
+		this.rootElement = document.createElement("div");
+		this.rootElement.className = "map-props-widget editor-panel";
 		this.container.element.appendChild(this.rootElement);
 		this.buildUI();
 		this.refreshUI();
-		container.on('destroy', () => this.destroy());
+		container.on("destroy", () => this.destroy());
 	}
 
 	destroy() {
@@ -594,7 +591,7 @@ class MapPropertiesComponent {
 	}
 
 	renderEditUI() {
-		this.mode = 'edit';
+		this.mode = "edit";
 		this.rootElement.innerHTML = `
 			<div class="map-props-wrapper">
 				<div class="map-props-header">
@@ -617,49 +614,51 @@ class MapPropertiesComponent {
 			</div>
 		`;
 
-		this.rootElement.querySelector('#mapName').addEventListener('change', (e) => {
+		this.rootElement.querySelector("#mapName").addEventListener("change", (e) => {
 			const map = this.getCurrentMap();
 			if (map) {
-				editorActions.dispatch(new MapUpdateCommand({mapId: map.id, field: 'name', newValue: e.target.value}));
+				editorActions.dispatch(new MapUpdateCommand({ mapId: map.id, field: "name", newValue: e.target.value }));
 			}
 		});
 
-		this.rootElement.querySelector('#mapWidth').addEventListener('change', (e) => {
+		this.rootElement.querySelector("#mapWidth").addEventListener("change", (e) => {
 			const map = this.getCurrentMap();
 			if (map) {
 				const newWidth = parseInt(e.target.value, 10);
 				const newHeight = map.height;
-				editorActions.dispatch(new MapResizeCommand({mapId: map.id, newWidth, newHeight}));
+				editorActions.dispatch(new MapResizeCommand({ mapId: map.id, newWidth, newHeight }));
 			}
 		});
 
-		this.rootElement.querySelector('#mapHeight').addEventListener('change', (e) => {
+		this.rootElement.querySelector("#mapHeight").addEventListener("change", (e) => {
 			const map = this.getCurrentMap();
 			if (map) {
 				const newWidth = map.width;
 				const newHeight = parseInt(e.target.value, 10);
-				editorActions.dispatch(new MapResizeCommand({mapId: map.id, newWidth, newHeight}));
+				editorActions.dispatch(new MapResizeCommand({ mapId: map.id, newWidth, newHeight }));
 			}
 		});
 
-		this.rootElement.querySelector('#btnNewMap').addEventListener('click', () => {
+		this.rootElement.querySelector("#btnNewMap").addEventListener("click", () => {
 			const newMapId = CryptoRandom.generateId();
-			editorActions.dispatch(new MapCreateCommand({
-				mapId: newMapId,
-				name: 'New Map',
-				width: 40,
-				height: 25
-			}));
-			editorActions.dispatch(new MapSwitchCommand({mapId: newMapId}));
+			editorActions.dispatch(
+				new MapCreateCommand({
+					mapId: newMapId,
+					name: "New Map",
+					width: 40,
+					height: 25,
+				}),
+			);
+			editorActions.dispatch(new MapSwitchCommand({ mapId: newMapId }));
 		});
 
-		this.rootElement.querySelector('#btnOpenMap').addEventListener('click', () => this.renderMapListUI());
+		this.rootElement.querySelector("#btnOpenMap").addEventListener("click", () => this.renderMapListUI());
 
 		this.refreshUI();
 	}
 
 	renderMapListUI() {
-		this.mode = 'list';
+		this.mode = "list";
 		this.rootElement.innerHTML = `
 			<div style="display: flex; flex-direction: column; gap: 10px;">
 				<input type="text" id="mapSearch" placeholder="Search maps..." style="width: 100%;">
@@ -668,34 +667,35 @@ class MapPropertiesComponent {
 			</div>
 		`;
 
-		this.rootElement.querySelector('#mapSearch').addEventListener('input', () => this.renderMapList());
-		this.rootElement.querySelector('#btnBack').addEventListener('click', () => this.renderEditUI());
+		this.rootElement.querySelector("#mapSearch").addEventListener("input", () => this.renderMapList());
+		this.rootElement.querySelector("#btnBack").addEventListener("click", () => this.renderEditUI());
 
 		this.renderMapList();
 	}
 
 	renderMapList() {
-		const list = this.rootElement.querySelector('#mapList');
-		const search = this.rootElement.querySelector('#mapSearch')?.value.toLowerCase() ?? '';
-		list.innerHTML = '';
+		const list = this.rootElement.querySelector("#mapList");
+		const search = this.rootElement.querySelector("#mapSearch")?.value.toLowerCase() ?? "";
+		list.innerHTML = "";
 
-		Object.values(globalStore.state.maps).forEach(map => {
+		Object.values(globalStore.state.maps).forEach((map) => {
 			if (map.name.toLowerCase().includes(search) || map.id.toLowerCase().includes(search)) {
-				const item = document.createElement('div');
-				item.style.cssText = 'padding: 8px; border-bottom: 1px solid #333; cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
+				const item = document.createElement("div");
+				item.style.cssText =
+					"padding: 8px; border-bottom: 1px solid #333; cursor: pointer; display: flex; justify-content: space-between; align-items: center;";
 				const currId = globalStore.state.editor?.currMapId;
-				if (map.id === currId) item.style.background = '#2563eb';
+				if (map.id === currId) item.style.background = "#2563eb";
 				item.innerHTML = `
 					<div>
 						<div style="font-weight: bold;">${map.name}</div>
 						<div style="font-size: 11px; color: #888; font-family: monospace;">${map.id} (${map.width}x${map.height})</div>
 					</div>
-					<button class="btnOpen" style="padding: 2px 6px; font-size: 11px;">${map.id === currId ? 'Current' : 'Open'}</button>
+					<button class="btnOpen" style="padding: 2px 6px; font-size: 11px;">${map.id === currId ? "Current" : "Open"}</button>
 				`;
-				item.querySelector('.btnOpen').addEventListener('click', (e) => {
+				item.querySelector(".btnOpen").addEventListener("click", (e) => {
 					e.stopPropagation();
 					if (map.id !== currId) {
-						editorActions.dispatch(new MapSwitchCommand({mapId: map.id}));
+						editorActions.dispatch(new MapSwitchCommand({ mapId: map.id }));
 						this.renderEditUI();
 					}
 				});
@@ -705,13 +705,13 @@ class MapPropertiesComponent {
 	}
 
 	refreshUI() {
-		if(!this.rootElement) return;
+		if (!this.rootElement) return;
 		const map = this.getCurrentMap();
 		if (map) {
-			const mapNameEl = this.rootElement.querySelector('#mapName');
-			const mapWidthEl = this.rootElement.querySelector('#mapWidth');
-			const mapHeightEl = this.rootElement.querySelector('#mapHeight');
-			const mapIdEl = this.rootElement.querySelector('#mapIdDisplay');
+			const mapNameEl = this.rootElement.querySelector("#mapName");
+			const mapWidthEl = this.rootElement.querySelector("#mapWidth");
+			const mapHeightEl = this.rootElement.querySelector("#mapHeight");
+			const mapIdEl = this.rootElement.querySelector("#mapIdDisplay");
 			if (mapNameEl) mapNameEl.value = map.name;
 			if (mapWidthEl) mapWidthEl.value = map.width;
 			if (mapHeightEl) mapHeightEl.value = map.height;
@@ -725,25 +725,25 @@ class BrushPanelComponent {
 		globalStore.subscribe(GameStateKeys.TileDictionary, () => this.updateSelectedTile());
 		globalStore.subscribe(GameStateKeys.EntitiesConfig, () => this.updateSelectedEntity());
 		this.rootElement = null;
-		this.brushMode = 'brush';
+		this.brushMode = "brush";
 		this.selectedTileId = null;
 		this.selectedEntity = null;
-		this.activeBrushType = 'tile';
+		this.activeBrushType = "tile";
 
 		editorEvents.on(EditorEvents.TILE_SELECTED, (id) => this.setSelectedTile(id));
-		editorEvents.on(EditorEvents.ENTITY_SELECTED, ({category, id}) => this.setSelectedEntity(category, id));
+		editorEvents.on(EditorEvents.ENTITY_SELECTED, ({ category, id }) => this.setSelectedEntity(category, id));
 	}
 
 	init(container) {
 		this.container = container;
-		this.rootElement = document.createElement('div');
-		this.rootElement.className = 'editor-widget editor-panel';
+		this.rootElement = document.createElement("div");
+		this.rootElement.className = "editor-widget editor-panel";
 		this.container.element.appendChild(this.rootElement);
 		this.buildUI();
 		this.updateSelectedTile();
 		this.updateSelectedEntity();
 		this.updateBrushSelectionHighlight();
-		container.on('destroy', () => this.destroy());
+		container.on("destroy", () => this.destroy());
 	}
 
 	destroy() {
@@ -791,20 +791,20 @@ class BrushPanelComponent {
 			</div>
 		`;
 
-		this.rootElement.querySelector('#modeBrush').addEventListener('click', () => this.setMode('brush'));
-		this.rootElement.querySelector('#modeSelect').addEventListener('click', () => this.setMode('select'));
-		this.rootElement.querySelector('#modeRect').addEventListener('click', () => this.setMode('rectangle'));
+		this.rootElement.querySelector("#modeBrush").addEventListener("click", () => this.setMode("brush"));
+		this.rootElement.querySelector("#modeSelect").addEventListener("click", () => this.setMode("select"));
+		this.rootElement.querySelector("#modeRect").addEventListener("click", () => this.setMode("rectangle"));
 
-		this.rootElement.querySelector('#tileSelectCol').addEventListener('click', () => {
+		this.rootElement.querySelector("#tileSelectCol").addEventListener("click", () => {
 			if (this.selectedTileId) {
-				this.activeBrushType = 'tile';
+				this.activeBrushType = "tile";
 				this.updateBrushSelectionHighlight();
 			}
 		});
 
-		this.rootElement.querySelector('#entitySelectCol').addEventListener('click', () => {
+		this.rootElement.querySelector("#entitySelectCol").addEventListener("click", () => {
 			if (this.selectedEntity) {
-				this.activeBrushType = 'entity';
+				this.activeBrushType = "entity";
 				this.updateBrushSelectionHighlight();
 			}
 		});
@@ -812,53 +812,53 @@ class BrushPanelComponent {
 
 	setMode(mode) {
 		this.brushMode = mode;
-		const buttons = this.rootElement.querySelectorAll('.brush-btn');
-		buttons.forEach(btn => {
-			btn.style.background = '#374151';
-			btn.style.color = '#e5e7eb';
+		const buttons = this.rootElement.querySelectorAll(".brush-btn");
+		buttons.forEach((btn) => {
+			btn.style.background = "#374151";
+			btn.style.color = "#e5e7eb";
 		});
-		const btnId = mode === 'brush' ? 'modeBrush' : mode === 'select' ? 'modeSelect' : 'modeRect';
+		const btnId = mode === "brush" ? "modeBrush" : mode === "select" ? "modeSelect" : "modeRect";
 		const activeBtn = this.rootElement.querySelector(`#${btnId}`);
 		if (activeBtn) {
-			activeBtn.style.background = '#2563eb';
-			activeBtn.style.color = 'white';
+			activeBtn.style.background = "#2563eb";
+			activeBtn.style.color = "white";
 		}
 
-		const selectSection = this.rootElement.querySelector('#brushSelectSection');
-		const inspectSection = this.rootElement.querySelector('#inspectSection');
+		const selectSection = this.rootElement.querySelector("#brushSelectSection");
+		const inspectSection = this.rootElement.querySelector("#inspectSection");
 		if (selectSection && inspectSection) {
-			if (mode === 'select') {
-				selectSection.style.display = 'none';
-				inspectSection.style.display = 'block';
+			if (mode === "select") {
+				selectSection.style.display = "none";
+				inspectSection.style.display = "block";
 			} else {
-				selectSection.style.display = 'flex';
-				inspectSection.style.display = 'none';
+				selectSection.style.display = "flex";
+				inspectSection.style.display = "none";
 			}
 		}
 	}
 
 	setSelectedTile(tileId) {
 		this.selectedTileId = tileId;
-		this.activeBrushType = 'tile';
+		this.activeBrushType = "tile";
 		this.updateSelectedTile();
 		this.updateBrushSelectionHighlight();
 	}
 
 	setSelectedEntity(category, entityId) {
 		this.selectedEntity = { category, entityId };
-		this.activeBrushType = 'entity';
+		this.activeBrushType = "entity";
 		this.updateSelectedEntity();
 		this.updateBrushSelectionHighlight();
 	}
 
 	updateSelectedTile() {
 		if (!this.rootElement) return;
-		const display = this.rootElement.querySelector('#selectedTileDisplay');
+		const display = this.rootElement.querySelector("#selectedTileDisplay");
 		if (!display) return;
 		const tileId = this.selectedTileId;
 		const tile = tileId ? globalStore.state.tileDictionary[tileId] : null;
 		if (tile) {
-			const gTile = globalStore.state.graphicalTiles[tile.graphicalId] || {char: '?', color: '#FFF'};
+			const gTile = globalStore.state.graphicalTiles[tile.graphicalId] || { char: "?", color: "#FFF" };
 			display.innerHTML = `
 				<span style="color: ${gTile.color}; font-size: 24px; font-family: monospace; margin-right: 10px;">${gTile.char}</span>
 				<span>${tile.name}</span>
@@ -870,12 +870,12 @@ class BrushPanelComponent {
 
 	updateSelectedEntity() {
 		if (!this.rootElement) return;
-		const display = this.rootElement.querySelector('#selectedEntityDisplay');
+		const display = this.rootElement.querySelector("#selectedEntityDisplay");
 		if (!display) return;
 		const entInfo = this.selectedEntity;
-		const ent = entInfo ? (globalStore.state[entInfo.category]?.[entInfo.entityId]) : null;
+		const ent = entInfo ? globalStore.state[entInfo.category]?.[entInfo.entityId] : null;
 		if (ent) {
-			const gTile = globalStore.state.graphicalEntities[ent.graphicalId || ent.id] || {char: '?', color: '#FFF'};
+			const gTile = globalStore.state.graphicalEntities[ent.graphicalId || ent.id] || { char: "?", color: "#FFF" };
 			display.innerHTML = `
 				<span style="color: ${gTile.color}; font-size: 24px; font-family: monospace; margin-right: 10px;">${gTile.char}</span>
 				<span>${ent.name}</span>
@@ -886,43 +886,44 @@ class BrushPanelComponent {
 	}
 
 	updateBrushSelectionHighlight() {
-		const tileCol = this.rootElement.querySelector('#tileSelectCol');
-		const entityCol = this.rootElement.querySelector('#entitySelectCol');
+		const tileCol = this.rootElement.querySelector("#tileSelectCol");
+		const entityCol = this.rootElement.querySelector("#entitySelectCol");
 		if (!tileCol || !entityCol) return;
 
-		tileCol.style.background = (this.activeBrushType === 'tile') ? '#1e3a8a' : 'transparent';
-		entityCol.style.background = (this.activeBrushType === 'entity') ? '#1e3a8a' : 'transparent';
+		tileCol.style.background = this.activeBrushType === "tile" ? "#1e3a8a" : "transparent";
+		entityCol.style.background = this.activeBrushType === "entity" ? "#1e3a8a" : "transparent";
 	}
 
 	inspectCell(x, y) {
-		const inspectDisplay = this.rootElement.querySelector('#inspectDisplay');
+		const inspectDisplay = this.rootElement.querySelector("#inspectDisplay");
 		if (!inspectDisplay) return;
 
 		const map = mapRendererComponent.getCurrentMap();
 		if (!map || x < 0 || x >= map.width || y < 0 || y >= map.height) {
-			inspectDisplay.innerHTML = 'Out of bounds';
+			inspectDisplay.innerHTML = "Out of bounds";
 			return;
 		}
 
 		const tileId = map.tiles[y][x];
 		const tile = tileId ? globalStore.state.tileDictionary[tileId] : null;
-		const tileName = tile ? tile.name : 'Empty';
+		const tileName = tile ? tile.name : "Empty";
 
 		const entitiesAtCell = [];
 		const mapEntities = globalStore.state.mapEntities[map.id];
 		for (const mapEnt of mapEntities) {
 			if (mapEnt.x === x && mapEnt.y === y) {
-				let name = 'Unknown';
-				let char = '?';
-				let color = '#FFF';
+				let name = "Unknown";
+				let char = "?";
+				let color = "#FFF";
 
-				const ent = globalStore.state.monsters[mapEnt.entityId] ||
-				            globalStore.state.items[mapEnt.entityId] ||
-				            globalStore.state.mapObjects[mapEnt.entityId];
+				const ent =
+					globalStore.state.monsters[mapEnt.entityId] ||
+					globalStore.state.items[mapEnt.entityId] ||
+					globalStore.state.mapObjects[mapEnt.entityId];
 
 				if (ent) {
 					name = ent.name;
-					const gTile = globalStore.state.graphicalEntities[ent.graphicalId || mapEnt.entityId] || { char: '?', color: '#FFF' };
+					const gTile = globalStore.state.graphicalEntities[ent.graphicalId || mapEnt.entityId] || { char: "?", color: "#FFF" };
 					char = gTile.char;
 					color = gTile.color;
 				}
@@ -930,14 +931,18 @@ class BrushPanelComponent {
 			}
 		}
 
-		let entitiesHtml = '';
+		let entitiesHtml = "";
 		if (entitiesAtCell.length > 0) {
-			entitiesHtml = entitiesAtCell.map(e => `
+			entitiesHtml = entitiesAtCell
+				.map(
+					(e) => `
 				<div style="display: flex; align-items: center; gap: 5px;">
 					<span style="color: ${e.color}; font-family: monospace; font-size: 14px;">${e.char}</span>
 					<span>${e.name}</span>
 				</div>
-			`).join('');
+			`,
+				)
+				.join("");
 		} else {
 			entitiesHtml = '<span style="color: #666;">No entities here</span>';
 		}
@@ -961,10 +966,19 @@ class BrushPanelComponent {
 
 class MapRendererComponent {
 	constructor() {
-		globalStore.subscribe(GameStateKeys.Maps, () => { this.resize(); this.render(); });
-		globalStore.subscribe(GameStateKeys.EditorCurrMap, () => { this.render(); });
-		globalStore.subscribe(GameStateKeys.MapEntities, () => { this.render(); });
-		globalStore.subscribe(GameStateKeys.EntitiesConfig, () => { this.render(); });
+		globalStore.subscribe(GameStateKeys.Maps, () => {
+			this.resize();
+			this.render();
+		});
+		globalStore.subscribe(GameStateKeys.EditorCurrMap, () => {
+			this.render();
+		});
+		globalStore.subscribe(GameStateKeys.MapEntities, () => {
+			this.render();
+		});
+		globalStore.subscribe(GameStateKeys.EntitiesConfig, () => {
+			this.render();
+		});
 		this.rootElement = null;
 		this.canvas = null;
 		this.ctx = null;
@@ -981,13 +995,13 @@ class MapRendererComponent {
 			tiles: true,
 			monsters: true,
 			items: true,
-			objects: true
+			objects: true,
 		};
 	}
 
 	init(container) {
 		this.container = container;
-		this.rootElement = document.createElement('div');
+		this.rootElement = document.createElement("div");
 		this.rootElement.style.cssText = `
 			width: 100%;
 			height: 100%;
@@ -998,7 +1012,7 @@ class MapRendererComponent {
 			flex-direction: column;
 		`;
 
-		this.layerBar = document.createElement('div');
+		this.layerBar = document.createElement("div");
 		this.layerBar.style.cssText = `
 			display: flex;
 			gap: 8px;
@@ -1008,18 +1022,18 @@ class MapRendererComponent {
 			z-index: 10;
 		`;
 
-		const layerKeys = ['tiles', 'monsters', 'items', 'objects'];
+		const layerKeys = ["tiles", "monsters", "items", "objects"];
 		this.layerButtons = {};
-		layerKeys.forEach(layer => {
-			const btn = document.createElement('button');
+		layerKeys.forEach((layer) => {
+			const btn = document.createElement("button");
 			btn.textContent = layer.charAt(0).toUpperCase() + layer.slice(1);
-			btn.className = 'layerBtn';
-			btn.addEventListener('click', () => {
+			btn.className = "layerBtn";
+			btn.addEventListener("click", () => {
 				this.layers[layer] = !this.layers[layer];
 				if (this.layers[layer]) {
-					btn.style.background = '#2563eb';
+					btn.style.background = "#2563eb";
 				} else {
-					btn.style.background = '#374151';
+					btn.style.background = "#374151";
 				}
 				this.render();
 			});
@@ -1028,14 +1042,14 @@ class MapRendererComponent {
 		});
 		this.rootElement.appendChild(this.layerBar);
 
-		this.canvas = document.createElement('canvas');
+		this.canvas = document.createElement("canvas");
 		this.canvas.style.cssText = `
 			display: block;
 			image-rendering: pixelated;
 			flex: 1;
 			min-height: 0;
 		`;
-		this.ctx = this.canvas.getContext('2d');
+		this.ctx = this.canvas.getContext("2d");
 
 		this.rootElement.appendChild(this.canvas);
 		this.container.element.appendChild(this.rootElement);
@@ -1047,7 +1061,7 @@ class MapRendererComponent {
 		this.resizeObserver = new ResizeObserver(() => this.resize());
 		this.resizeObserver.observe(this.rootElement);
 
-		container.on('destroy', () => this.destroy());
+		container.on("destroy", () => this.destroy());
 	}
 
 	destroy() {
@@ -1060,12 +1074,12 @@ class MapRendererComponent {
 	}
 
 	setupEvents() {
-		this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
-		this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
-		this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
-		this.canvas.addEventListener('mouseleave', (e) => this.onMouseUp(e));
-		this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-		this.canvas.addEventListener('wheel', (e) => this.onWheel(e), {passive: false});
+		this.canvas.addEventListener("mousedown", (e) => this.onMouseDown(e));
+		this.canvas.addEventListener("mousemove", (e) => this.onMouseMove(e));
+		this.canvas.addEventListener("mouseup", (e) => this.onMouseUp(e));
+		this.canvas.addEventListener("mouseleave", (e) => this.onMouseUp(e));
+		this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+		this.canvas.addEventListener("wheel", (e) => this.onWheel(e), { passive: false });
 	}
 
 	getCurrentMap() {
@@ -1088,7 +1102,7 @@ class MapRendererComponent {
 		const tileSize = this.getTileSize() * this.scale;
 		return {
 			x: Math.floor((x - this.offsetX) / tileSize),
-			y: Math.floor((y - this.offsetY) / tileSize)
+			y: Math.floor((y - this.offsetY) / tileSize),
 		};
 	}
 
@@ -1106,7 +1120,7 @@ class MapRendererComponent {
 			const map = this.getCurrentMap();
 			if (map && pos.x >= 0 && pos.x < map.width && pos.y >= 0 && pos.y < map.height) {
 				const brushMode = brushPanelComponent.getBrushMode();
-				if (brushMode === 'select') {
+				if (brushMode === "select") {
 					brushPanelComponent.inspectCell(pos.x, pos.y);
 				} else {
 					this.isPainting = true;
@@ -1166,27 +1180,17 @@ class MapRendererComponent {
 
 		const brushType = brushPanelComponent.activeBrushType;
 
-		if (brushType === 'entity') {
+		if (brushType === "entity") {
 			const activeEntity = brushPanelComponent.selectedEntity;
 			if (activeEntity) {
-				editorActions.dispatchOrAppend(
-					MapPaintEntityCommand,
-					{ mapId: map.id, entityId: activeEntity.entityId },
-					{ x, y },
-					10
-				);
+				editorActions.dispatchOrAppend(MapPaintEntityCommand, { mapId: map.id, entityId: activeEntity.entityId }, { x, y }, 10);
 			}
 		} else {
 			const tileId = brushPanelComponent.getSelectedTile() ?? null;
 			if (map.tiles[y][x] !== tileId) {
 				const oldValue = map.tiles[y][x] ?? null;
 
-				editorActions.dispatchOrAppend(
-					MapPaintTileCommand,
-					{ mapId: map.id, tileId: tileId },
-					{ x, y, oldValue },
-					10
-				);
+				editorActions.dispatchOrAppend(MapPaintTileCommand, { mapId: map.id, tileId: tileId }, { x, y, oldValue }, 10);
 			}
 		}
 	}
@@ -1204,7 +1208,7 @@ class MapRendererComponent {
 		const map = this.getCurrentMap();
 		if (!map) return;
 
-		this.ctx.fillStyle = '#111';
+		this.ctx.fillStyle = "#111";
 		this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
 		this.#renderTiles(map);
@@ -1212,7 +1216,7 @@ class MapRendererComponent {
 		this.#renderEntities(map);
 	}
 
-	#renderTiles(map){
+	#renderTiles(map) {
 		if (!this.layers.tiles) return;
 		const tileSize = this.getTileSize() * this.scale;
 		for (let y = 0; y < map.height; y++) {
@@ -1221,51 +1225,49 @@ class MapRendererComponent {
 				if (!tileId) continue;
 				const tile = globalStore.state.tileDictionary[tileId];
 				if (!tile) continue;
-				const gTile = globalStore.state.graphicalTiles[tile.graphicalId] || {char: '?', color: '#FFF'};
+				const gTile = globalStore.state.graphicalTiles[tile.graphicalId] || { char: "?", color: "#FFF" };
 				const screenX = Math.floor(this.offsetX + x * tileSize);
 				const screenY = Math.floor(this.offsetY + y * tileSize);
 				this.ctx.fillStyle = gTile.color;
 				this.ctx.font = `${tileSize}px monospace`;
-				this.ctx.textAlign = 'center';
-				this.ctx.textBaseline = 'middle';
+				this.ctx.textAlign = "center";
+				this.ctx.textBaseline = "middle";
 				this.ctx.fillText(gTile.char, screenX + tileSize / 2, screenY + tileSize / 2);
 			}
 		}
 	}
 
-	#renderEntities(map){
+	#renderEntities(map) {
 		const tileSize = this.getTileSize() * this.scale;
 		const mapEntities = globalStore.state.mapEntities[map.id];
 		for (const mapEnt of mapEntities) {
 			const entId = mapEnt.entityId;
-			const ent = globalStore.state.monsters[entId] ||
-				globalStore.state.items[entId] ||
-				globalStore.state.mapObjects[entId];
+			const ent = globalStore.state.monsters[entId] || globalStore.state.items[entId] || globalStore.state.mapObjects[entId];
 			if (!ent) continue;
 
 			let category = null;
-			if (globalStore.state.monsters[entId]) category = 'monsters';
-			else if (globalStore.state.items[entId]) category = 'items';
-			else if (globalStore.state.mapObjects[entId]) category = 'objects';
+			if (globalStore.state.monsters[entId]) category = "monsters";
+			else if (globalStore.state.items[entId]) category = "items";
+			else if (globalStore.state.mapObjects[entId]) category = "objects";
 
 			if (category && !this.layers[category]) continue;
 
-			const gTile = globalStore.state.graphicalEntities[ent.graphicalId || entId] || {char: '?', color: '#FFF'};
+			const gTile = globalStore.state.graphicalEntities[ent.graphicalId || entId] || { char: "?", color: "#FFF" };
 			const screenX = Math.floor(this.offsetX + mapEnt.x * tileSize);
 			const screenY = Math.floor(this.offsetY + mapEnt.y * tileSize);
 
 			// Cover the tile behind it completely
-			this.ctx.fillStyle = '#111';
+			this.ctx.fillStyle = "#111";
 			this.ctx.fillRect(screenX, screenY, tileSize, tileSize);
 
 			this.ctx.fillStyle = gTile.color;
 			this.ctx.font = `${tileSize}px monospace`;
-			this.ctx.textAlign = 'center';
-			this.ctx.textBaseline = 'middle';
+			this.ctx.textAlign = "center";
+			this.ctx.textBaseline = "middle";
 			this.ctx.fillText(gTile.char, screenX + tileSize / 2, screenY + tileSize / 2);
 		}
 
-		this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+		this.ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
 		this.ctx.lineWidth = 1;
 		this.ctx.beginPath();
 		for (let x = 0; x <= map.width; x++) {
@@ -1280,13 +1282,12 @@ class MapRendererComponent {
 		}
 		this.ctx.stroke();
 
-		this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+		this.ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
 		this.ctx.lineWidth = 2;
 		this.ctx.beginPath();
 		this.ctx.rect(this.offsetX, this.offsetY, map.width * tileSize, map.height * tileSize);
 		this.ctx.stroke();
 	}
-
 }
 
 export const tileDictionaryWidget = new TileDictionaryWidget();
@@ -1297,45 +1298,42 @@ export const mapRendererComponent = new MapRendererComponent();
 function initMapEditor() {
 	gui.registerMenuBtn("mainMapEditor", "Map", "Editor", () => {
 		gui.openWorkspaceClick({
-			components: ['MapProperties', 'TileDictionary', 'BrushPanel', 'Renderer'],
+			components: ["MapProperties", "TileDictionary", "BrushPanel", "Renderer"],
 			layoutConfig: {
-				type: 'row',
+				type: "row",
 				content: [
 					{
-						type: 'column',
+						type: "column",
 						width: 40,
 						content: [
-							{type: 'component', componentType: 'MapProperties'},
-							{type: 'component', componentType: 'TileDictionary'},
-							{type: 'component', componentType: 'BrushPanel'}
-						]
+							{ type: "component", componentType: "MapProperties" },
+							{ type: "component", componentType: "TileDictionary" },
+							{ type: "component", componentType: "BrushPanel" },
+						],
 					},
 					{
-						type: 'stack',
+						type: "stack",
 						width: 60,
-						content: [
-							{type: 'component', componentType: 'Renderer'},
-							{type: 'ROOT'}
-						]
-					}
-				]
-			}
+						content: [{ type: "component", componentType: "Renderer" }, { type: "ROOT" }],
+					},
+				],
+			},
 		});
 	});
 
-	gui.registerComponent('TileDictionary', 'Map tiles', null, (container, state) => {
+	gui.registerComponent("TileDictionary", "Map tiles", null, (container, state) => {
 		tileDictionaryWidget.init(container);
 	});
 
-	gui.registerComponent('MapProperties', 'Map properties', null, (container, state) => {
+	gui.registerComponent("MapProperties", "Map properties", null, (container, state) => {
 		mapPropertiesComponent.init(container);
 	});
 
-	gui.registerComponent('BrushPanel', 'Brush', null, (container, state) => {
+	gui.registerComponent("BrushPanel", "Brush", null, (container, state) => {
 		brushPanelComponent.init(container);
 	});
 
-	gui.registerComponent('Renderer', 'Map view', null, (container, state) => {
+	gui.registerComponent("Renderer", "Map view", null, (container, state) => {
 		mapRendererComponent.init(container);
 	});
 }

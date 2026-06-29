@@ -1,6 +1,6 @@
-import { gui } from '../gui.js';
-import {editorActions} from './actionsManager.js';
-import {EditorActionsEvents} from "./editorEvents.js";
+import { gui } from "../gui.js";
+import { editorActions } from "./actionsManager.js";
+import { EditorActionsEvents } from "./editorEvents.js";
 
 class ReplayDevWidget {
 	constructor() {
@@ -11,23 +11,23 @@ class ReplayDevWidget {
 			container.innerHTML = null;
 			this.container = container;
 
-			this.element = document.createElement('div');
-			this.element.className = 'rl-editor replay-dev-widget';
-			this.element.style.padding = '10px';
-			this.element.style.overflowY = 'auto';
-			this.element.style.height = '100%';
-			this.element.style.boxSizing = 'border-box';
+			this.element = document.createElement("div");
+			this.element.className = "rl-editor replay-dev-widget";
+			this.element.style.padding = "10px";
+			this.element.style.overflowY = "auto";
+			this.element.style.height = "100%";
+			this.element.style.boxSizing = "border-box";
 			this.container.element.appendChild(this.element);
 
-			this.element.addEventListener('click', (e) => {
-				const nodeEl = e.target.closest('.replay-node-item');
+			this.element.addEventListener("click", (e) => {
+				const nodeEl = e.target.closest(".replay-node-item");
 				if (!nodeEl) return;
 				const seqN = parseInt(nodeEl.dataset.seqN);
 				if (isNaN(seqN)) return;
 
 				this.selectNode(toggle(this.selectedNode, seqN));
 
-				function toggle(selectedNode, seqN){
+				function toggle(selectedNode, seqN) {
 					return selectedNode && selectedNode.seqN === seqN ? null : seqN;
 				}
 			});
@@ -51,7 +51,7 @@ class ReplayDevWidget {
 				nodes.push(curr);
 				curr = curr.getLatestChild();
 			}
-			this.selectedNode = nodes.find(n => n.seqN === seqN) || null;
+			this.selectedNode = nodes.find((n) => n.seqN === seqN) || null;
 		}
 		this.render();
 	}
@@ -70,40 +70,40 @@ class ReplayDevWidget {
 		const activeNode = editorActions.getCurrentNode();
 		let totalSize = 0;
 
-		const listHtml = nodes.map((node) => {
-			let sizeBytes = 0;
-			try {
-				sizeBytes = JSON.stringify(node.serialize()).length;
-			} catch (e) {
-				console.warn("Failed to serialize node", node);
-			}
+		const listHtml = nodes
+			.map((node) => {
+				let sizeBytes = 0;
+				try {
+					sizeBytes = JSON.stringify(node.serialize()).length;
+				} catch (e) {
+					console.warn("Failed to serialize node", node);
+				}
 
-			totalSize += sizeBytes;
+				totalSize += sizeBytes;
 
-			const isActive = node === activeNode;
-			const isSelected = node === this.selectedNode;
-			const commandName = node.command ? node.command.constructor.name : "BaseCommand";
-			const rowBg = isActive ? '#4caf5033' : (isSelected ? '#4488ff33' : 'transparent');
+				const isActive = node === activeNode;
+				const isSelected = node === this.selectedNode;
+				const commandName = node.command ? node.command.constructor.name : "BaseCommand";
+				const rowBg = isActive ? "#4caf5033" : isSelected ? "#4488ff33" : "transparent";
 
-			return `
+				return `
 			<div class="replay-node-item" data-seq-n="${node.seqN}" style="background-color: ${rowBg}; cursor: pointer;">
 				<span>
 					<strong>[${node.seqN}]</strong> ${commandName}
-				${isActive ? '<span class="replay-active-indicator">(Active)</span>' : ''	}
+				${isActive ? '<span class="replay-active-indicator">(Active)</span>' : ""}
 				</span>
 				<span class="replay-size-display">${sizeBytes} B</span>
 			</div>`;
-		}).join('');
+			})
+			.join("");
 
 		// Fallback to the active node if selectedNode is null (rendering live state)
 		const displayNode = this.selectedNode || activeNode;
-		let dataHtml = '';
+		let dataHtml = "";
 
 		if (displayNode && displayNode.command && displayNode.command.data) {
 			const dataJson = JSON.stringify(displayNode.command.data, null, 2);
-			const title = this.selectedNode
-				? `Command Data [${displayNode.seqN}]`
-				: `Active Command Data [${displayNode.seqN}]`;
+			const title = this.selectedNode ? `Command Data [${displayNode.seqN}]` : `Active Command Data [${displayNode.seqN}]`;
 
 			dataHtml = `
 			 <div class="replay-data-section" style="margin-top: 10px;">

@@ -1,6 +1,6 @@
 import { World } from "../../../libs/miniplex/miniplex.js";
 import { logger } from "../../utils/logger.js";
-import {PrefabStorage} from "./storage.js";
+import { PrefabStorage } from "./storage.js";
 
 class EventsManager {
 	#listeners = new Map();
@@ -13,13 +13,12 @@ class EventsManager {
 		queue.push({ callback, priority });
 		queue.sort((a, b) => b.priority - a.priority);
 	}
-	raise(event, entity){
-		logger.log("raise "+event.type)
-		if(this.#listeners.has(event.type)){
-
-			for (const {callback} of this.#listeners.get(event.type)) {
+	raise(event, entity) {
+		logger.log("raise " + event.type);
+		if (this.#listeners.has(event.type)) {
+			for (const { callback } of this.#listeners.get(event.type)) {
 				if (event.isCancelled) break;
-				logger.log("raise -> "+callback.name)
+				logger.log("raise -> " + callback.name);
 				callback(event, entity);
 			}
 		}
@@ -46,19 +45,19 @@ export class GameData {
 		return this.#relations;
 	}
 	/** @returns {EventsManager} */
-	get events(){
+	get events() {
 		return this.#events;
 	}
 
-	get prefabStorage(){
+	get prefabStorage() {
 		return this.#prefabStorage;
 	}
 
-	get playerId(){
+	get playerId() {
 		return this.#world.id(this.#player);
 	}
-	get player(){
-		return this.#player
+	get player() {
+		return this.#player;
 	}
 
 	set player(player) {
@@ -69,6 +68,3 @@ export class GameData {
 		return this.#causalityId++;
 	}
 }
-
-
-

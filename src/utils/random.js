@@ -1,13 +1,12 @@
-
-class CryptoRandom{
+class CryptoRandom {
 	// approx. 6 chars
 	static generateId() {
 		const bytes = crypto.getRandomValues(new Uint8Array(6));
 		// base64url-like
 		return btoa(String.fromCharCode(...bytes))
-			.replace(/\+/g, '-')
-			.replace(/\//g, '_')
-			.replace(/=+$/, '');
+			.replace(/\+/g, "-")
+			.replace(/\//g, "_")
+			.replace(/=+$/, "");
 	}
 }
 
@@ -24,7 +23,7 @@ class SeededRandom {
 		return array[0];
 	}
 
-	getSeed(){
+	getSeed() {
 		return this.#seed;
 	}
 
@@ -55,4 +54,4 @@ class SeededRandom {
 	}
 }
 
-export {CryptoRandom, SeededRandom}
+export { CryptoRandom, SeededRandom };

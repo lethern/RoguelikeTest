@@ -1,11 +1,11 @@
-import {wsConnection, rtcConnection, CollabRole, FollowMode} from "../connection.js";
-import {globalStore} from "../globalStore.js";
-import {CryptoRandom} from "../utils/random.js";
-import {HistoryNode} from "./historyNode.js";
-import {editorActions} from './actionsManager.js';
-import {gui} from "../gui.js";
-import {ConnectionEvents} from "./editorEvents.js";
-import {remoteCursor} from "./remoteCursor.js";
+import { wsConnection, rtcConnection, CollabRole, FollowMode } from "../connection.js";
+import { globalStore } from "../globalStore.js";
+import { CryptoRandom } from "../utils/random.js";
+import { HistoryNode } from "./historyNode.js";
+import { editorActions } from "./actionsManager.js";
+import { gui } from "../gui.js";
+import { ConnectionEvents } from "./editorEvents.js";
+import { remoteCursor } from "./remoteCursor.js";
 
 /*
            Inviter / CollabSharer                         Receiver / CollabFollower
@@ -102,13 +102,17 @@ class CollabSession {
 	sendMsg(type, payload = {}) {
 		this.manager.sendPeerMsg(type, this.remotePeerId, {
 			sessionId: this.id,
-			...payload
+			...payload,
 		});
 	}
 
-	handleMessage(msg) { throw new Error("handleMessage must be implemented by subclass"); }
+	handleMessage(msg) {
+		throw new Error("handleMessage must be implemented by subclass");
+	}
 
-	startHandshake() { throw new Error("startHandshake must be implemented by subclass"); }
+	startHandshake() {
+		throw new Error("startHandshake must be implemented by subclass");
+	}
 
 	disconnect() {
 		this.isEstablished = false;
@@ -127,7 +131,7 @@ class CollabSharer extends CollabSession {
 			this.manager.finalizeSessionUI(this.config);
 			this.sendMsg(CollabMessageType.START);
 		} else if (msg.type === CollabMessageType.FULL_SYNC_REQUEST) {
-			if(this.isEstablished) {
+			if (this.isEstablished) {
 				this.forceFullSync();
 			}
 		}
@@ -147,7 +151,7 @@ class CollabSharer extends CollabSession {
 			layout: layout,
 			nodes,
 			current: current.seqN,
-			end: end.seqN
+			end: end.seqN,
 		});
 	}
 }
@@ -244,8 +248,7 @@ class CollaborationManager {
 					break;
 
 				default:
-					if (this.#session && msg.senderId === this.#session.remotePeerId && msg.sessionId === this.#session.id)
-					{
+					if (this.#session && msg.senderId === this.#session.remotePeerId && msg.sessionId === this.#session.id) {
 						this.#session.handleMessage(msg);
 					}
 					break;
@@ -258,7 +261,7 @@ class CollaborationManager {
 			type,
 			targetId: targetId,
 			senderId: wsConnection.getClientId(),
-			...payload
+			...payload,
 		});
 	}
 
@@ -280,7 +283,7 @@ class CollaborationManager {
 
 		this.setUiBlocked(false);
 		this.#renderCollabBar();
-		remoteCursor.unregister('collab');
+		remoteCursor.unregister("collab");
 	}
 
 	finalizeSessionUI(config) {
@@ -288,7 +291,7 @@ class CollaborationManager {
 
 		if (config.shareCursor) {
 			rtcConnection.connect(true);
-			remoteCursor.register('collab');
+			remoteCursor.register("collab");
 		}
 
 		if (config.roleLocal === CollabRole.FOLLOWER && config.blockControl) {
@@ -380,7 +383,7 @@ class CollaborationManager {
 			this.#collabBar.innerHTML = `
 				<span class="collab-badge badge-active">SHARING</span>
 				<button id="collab-bar-menu" class="collab-btn">Menu</button>
-				${showReturnCtrl ? '<button id="collab-bar-return-ctrl" class="collab-btn btn-danger">Return control</button>' : ''}
+				${showReturnCtrl ? '<button id="collab-bar-return-ctrl" class="collab-btn btn-danger">Return control</button>' : ""}
 			`;
 
 			this.#collabBar.querySelector("#collab-bar-menu").onclick = () => this.openMenu();
@@ -406,7 +409,7 @@ class CollaborationManager {
 			<div class="collab-modal">
 				<div class="collab-header">Setup collab</div>
 				<div class="collab-row">Server: <span class="collab-badge" id="collab-setup-ws-status">${wsStatus}</span></div>
-				<button id="collab-btn-connect" class="collab-btn btn-success" style="display: ${wsStatus === 'CONNECTED' ? 'none' : 'inline-block'}; margin-bottom: 8px;">Connect to Server</button>
+				<button id="collab-btn-connect" class="collab-btn btn-success" style="display: ${wsStatus === "CONNECTED" ? "none" : "inline-block"}; margin-bottom: 8px;">Connect to Server</button>
 				
 				<div class="collab-row">Peer Connected: <span class="collab-badge" id="collab-setup-peer-status">${isPeer ? "YES" : "NO"}</span></div>
 				<div class="collab-error" id="collab-setup-error" style="display: none;"></div>
@@ -451,14 +454,12 @@ class CollaborationManager {
 				followMode: followAll ? FollowMode.FOLLOW_ALL : FollowMode.STATE_ONLY,
 				blockControl: this.#overlay.querySelector("#collab-block-ctrl").checked,
 				roleLocal: master ? CollabRole.MASTER : CollabRole.FOLLOWER,
-				roleRemote: master ? CollabRole.FOLLOWER : CollabRole.MASTER
+				roleRemote: master ? CollabRole.FOLLOWER : CollabRole.MASTER,
 			};
 
 			const sessionId = CryptoRandom.generateId();
 
-			this.#session = master
-				? new CollabSharer(this, config, null, sessionId)
-				: new CollabFollower(this, config, null, sessionId);
+			this.#session = master ? new CollabSharer(this, config, null, sessionId) : new CollabFollower(this, config, null, sessionId);
 
 			this.sendPeerMsg(CollabMessageType.INVITE, null, {
 				sessionId,
@@ -487,9 +488,12 @@ class CollaborationManager {
 				<div class="collab-row">Remote client: <strong>${config?.roleRemote}</strong></div>
 				
 				<div class="collab-group">
-					<label><input type="checkbox" id="collab-toggle-cursor" ${config?.shareCursor ? 'checked' : ''}> Share ghost cursor</label><br>
-					${config?.roleLocal === CollabRole.FOLLOWER ?
-			`<label><input type="checkbox" id="collab-toggle-follow" ${config?.followMode === FollowMode.FOLLOW_ALL ? 'checked' : ''}> Follow UI changes</label>` : ''}
+					<label><input type="checkbox" id="collab-toggle-cursor" ${config?.shareCursor ? "checked" : ""}> Share ghost cursor</label><br>
+					${
+						config?.roleLocal === CollabRole.FOLLOWER
+							? `<label><input type="checkbox" id="collab-toggle-follow" ${config?.followMode === FollowMode.FOLLOW_ALL ? "checked" : ""}> Follow UI changes</label>`
+							: ""
+					}
 				</div>
 				<hr>
 				<div class="collab-actions">
@@ -504,17 +508,18 @@ class CollaborationManager {
 			config.shareCursor = e.target.checked;
 			if (config.shareCursor) {
 				rtcConnection.connect(true);
-				remoteCursor.register('collab');
+				remoteCursor.register("collab");
 			} else {
 				rtcConnection.disconnect();
-				remoteCursor.unregister('collab');
+				remoteCursor.unregister("collab");
 			}
 		};
 
 		const followToggle = this.#overlay.querySelector("#collab-toggle-follow");
-		if (followToggle) followToggle.onchange = (e) => {
-			if (config) config.followMode = e.target.checked ? FollowMode.FOLLOW_ALL : FollowMode.STATE_ONLY;
-		};
+		if (followToggle)
+			followToggle.onchange = (e) => {
+				if (config) config.followMode = e.target.checked ? FollowMode.FOLLOW_ALL : FollowMode.STATE_ONLY;
+			};
 
 		this.#overlay.querySelector("#collab-btn-disconnect").onclick = () => {
 			this.#session?.sendMsg(CollabMessageType.DISCONNECT);
@@ -560,7 +565,7 @@ class CollaborationManager {
 				followMode: msg.followMode,
 				blockControl: msg.blockControl,
 				roleLocal: proposedLocalRole,
-				roleRemote: msg.master ? CollabRole.MASTER : CollabRole.FOLLOWER
+				roleRemote: msg.master ? CollabRole.MASTER : CollabRole.FOLLOWER,
 			};
 
 			this.#session = config.master
@@ -574,7 +579,7 @@ class CollaborationManager {
 
 		this.#overlay.querySelector("#collab-btn-decline").onclick = () => {
 			this.sendPeerMsg(CollabMessageType.REJECT, msg.senderId, { sessionId: msg.sessionId });
-			this.#collabBar.innerHTML = '';
+			this.#collabBar.innerHTML = "";
 			this.close();
 		};
 
@@ -591,7 +596,7 @@ class CollaborationManager {
 				node = node.children[0];
 				nodes.push(node.serialize());
 			}
-			node.children.forEach(child => collectNodes(child));
+			node.children.forEach((child) => collectNodes(child));
 		};
 
 		collectNodes(root);
@@ -599,7 +604,7 @@ class CollaborationManager {
 		return {
 			nodes,
 			current: editorActions.getCurrentNode(),
-			end: editorActions.getLastNode()
+			end: editorActions.getLastNode(),
 		};
 	}
 

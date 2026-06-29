@@ -1,11 +1,10 @@
-import {config} from "./config.js";
+import { config } from "./config.js";
 
-class App{
-
+class App {
 	constructor() {
 		this.#loadConfig();
 
-		document.addEventListener('DOMContentLoaded', () =>{
+		document.addEventListener("DOMContentLoaded", () => {
 			this.init();
 		});
 	}
@@ -13,32 +12,31 @@ class App{
 	async init() {
 		//requestAnimationFrame(this.#updateFunc);{
 
-		const {initAll} = await import('./initialization.js');
+		const { initAll } = await import("./initialization.js");
 		initAll();
 
-		const {gui} = await import('./gui.js');
+		const { gui } = await import("./gui.js");
 		gui.init();
 
-		const {initTestWidget} = await import('./game/testWidget.js');
+		const { initTestWidget } = await import("./game/testWidget.js");
 		initTestWidget();
 
-		const {editorUndoManager} = await import('./editor/undoManager.js');
+		const { editorUndoManager } = await import("./editor/undoManager.js");
 		editorUndoManager.init();
 
 		//const {actionSyncCoordinator} = await import('./coordinators.js');
 		//actionSyncCoordinator.loadPersisted();
-		const {editorPersistenceManager} = await import('./editor/persistenceManager.js');
+		const { editorPersistenceManager } = await import("./editor/persistenceManager.js");
 		editorPersistenceManager.loadLocal();
 
-		const {game} = await import('./game/game.js');
+		const { game } = await import("./game/game.js");
 		game.init();
 	}
 
-	#loadConfig(){
+	#loadConfig() {
 		const saved = localStorage.getItem("configVars");
-		if(saved) config.loadConfigFromData(JSON.parse(saved));
+		if (saved) config.loadConfigFromData(JSON.parse(saved));
 	}
-
 }
 
 export const app = new App();

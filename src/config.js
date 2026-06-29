@@ -1,4 +1,3 @@
-
 /*
 * example *
 const MapEditorConfig = Object.freeze({
@@ -12,8 +11,8 @@ return config.getConfigValue(MapEditorConfig.MAP_EDITOR_TILE_SIZE);
 class Config {
 	#configVarValues = {};
 
-	loadConfigFromData(data){
-		for(const it in data){
+	loadConfigFromData(data) {
+		for (const it in data) {
 			const value = data[it];
 			this.setConfigValue(it, value);
 		}
@@ -23,25 +22,25 @@ class Config {
 		const obj = this.getConfigVarObject(name);
 
 		switch (typeof obj.defaultValue) {
-			case 'string':
+			case "string":
 				obj.value = String(value);
 				break;
-			case 'number': {
+			case "number": {
 				const num = Number(value);
 				if (!Number.isFinite(num)) return;
 				obj.value = num;
 				break;
 			}
-			case 'boolean': {
+			case "boolean": {
 				let bool;
-				if (typeof value === 'boolean') {
+				if (typeof value === "boolean") {
 					bool = value;
-				} else if (typeof value === 'string') {
+				} else if (typeof value === "string") {
 					const v = value.trim().toLowerCase();
-					if (v === 'true' || v === '1') bool = true;
-					else if (v === 'false' || v === '0') bool = false;
+					if (v === "true" || v === "1") bool = true;
+					else if (v === "false" || v === "0") bool = false;
 					else return;
-				} else if (typeof value === 'number') {
+				} else if (typeof value === "number") {
 					if (value === 1) bool = true;
 					else if (value === 0) bool = false;
 					else return;
@@ -54,12 +53,12 @@ class Config {
 		}
 	}
 
-	getConfigValue(name){
+	getConfigValue(name) {
 		return this.getConfigVarObject(name).value;
 	}
 
-	getConfigVarObject(name){
-		if(!this.#configVarValues[name]) throw new Error(`getConfigVar: missing var ${name}`);
+	getConfigVarObject(name) {
+		if (!this.#configVarValues[name]) throw new Error(`getConfigVar: missing var ${name}`);
 		return this.#configVarValues[name];
 	}
 
@@ -67,21 +66,21 @@ class Config {
 		return Object.values(this.#configVarValues);
 	}
 
-	createConfigSave(){
+	createConfigSave() {
 		const save = {};
-		for(const it in this.#configVarValues){
+		for (const it in this.#configVarValues) {
 			const confVar = this.#configVarValues(it);
-			if(confVar.value !== confVar.defaultValue){
+			if (confVar.value !== confVar.defaultValue) {
 				save[it] = confVar.value;
 			}
 		}
 		return save;
 	}
 
-	addConfigVar(name, value, desc, friendlyName = undefined, groupName = undefined){
-		if(this.#configVarValues[name]) throw new Error(`addConfigVar: ${name} already exists`);
-		if(!friendlyName) friendlyName = name.toLowerCase();
-		this.#configVarValues[name] = {name, value, defaultValue: value, friendlyName, desc, groupName};
+	addConfigVar(name, value, desc, friendlyName = undefined, groupName = undefined) {
+		if (this.#configVarValues[name]) throw new Error(`addConfigVar: ${name} already exists`);
+		if (!friendlyName) friendlyName = name.toLowerCase();
+		this.#configVarValues[name] = { name, value, defaultValue: value, friendlyName, desc, groupName };
 	}
 }
-export const config = new Config;
+export const config = new Config();

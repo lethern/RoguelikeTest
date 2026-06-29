@@ -1,14 +1,20 @@
-import EventEmitter from '../utils/eventEmitter.js';
-import { StorageManager } from '../utils/storage.js';
-import { EditorPersistenceEvents, EditorActionsEvents } from './editorEvents.js';
-import {config} from "../config.js";
+import EventEmitter from "../utils/eventEmitter.js";
+import { StorageManager } from "../utils/storage.js";
+import { EditorPersistenceEvents, EditorActionsEvents } from "./editorEvents.js";
+import { config } from "../config.js";
 
 const FULL_SNAPSHOT_KEY = "full_snapshot";
 
 const EditorPersistenceManagerConfig = Object.freeze({
 	SAVE_INTERVAL: "SAVE_INTERVAL",
 });
-config.addConfigVar(EditorPersistenceManagerConfig.SAVE_INTERVAL, 100, 'Number of undo steps before full save', 'editorSaveInterval', 'EditorPersistenceManagerConfig');
+config.addConfigVar(
+	EditorPersistenceManagerConfig.SAVE_INTERVAL,
+	100,
+	"Number of undo steps before full save",
+	"editorSaveInterval",
+	"EditorPersistenceManagerConfig",
+);
 
 class EditorPersistenceManager extends EventEmitter {
 	constructor() {
@@ -25,7 +31,7 @@ class EditorPersistenceManager extends EventEmitter {
 	exportState(type = EditorPersistenceEvents.SAVE_DISK) {
 		const snapshot = {
 			timestamp: Date.now(),
-			components: {}
+			components: {},
 		};
 		this.emit(type, snapshot.components);
 		return snapshot;

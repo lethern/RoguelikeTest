@@ -1,44 +1,43 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="us">
-<head>
-	<meta charset="UTF-8">
-	<title>Roguelike</title>
+	<head>
+		<meta charset="UTF-8" />
+		<title>Roguelike</title>
 
-	<link type="text/css" rel="stylesheet" href="libs/goldenLayoutBundle/css/goldenlayout-base.css"/>
-	<link type="text/css" rel="stylesheet" href="libs/goldenLayoutBundle/css/themes/goldenlayout-dark-theme.css"/>
-	<link type="text/css" rel="stylesheet" href="css/general.css?v=1"/>
+		<link type="text/css" rel="stylesheet" href="libs/goldenLayoutBundle/css/goldenlayout-base.css" />
+		<link type="text/css" rel="stylesheet" href="libs/goldenLayoutBundle/css/themes/goldenlayout-dark-theme.css" />
+		<link type="text/css" rel="stylesheet" href="css/general.css?v=1" />
 
-	<script type="module" src="src/app.js"></script>
-	<script type="module" src="src/config.js"></script>
-	<script type="module" src="src/gui.js"></script>
-	<script type="module" src="src/editor/historyNode.js"></script>
-	<script type="module" src="src/editor/monstersEditor.js"></script>
-	<script type="module" src="src/editor/configWidget.js"></script>
-	<script type="module" src="src/editor/connectionWidget.js"></script>
-	<script type="module" src="src/editor/replayWidget.js"></script>
-	<script type="module" src="src/editor/collabWidget.js"></script>
-	<script type="module" src="src/editor/menuWidget.js"></script>
-	<script type="module" src="src/editor/mapEditor.js"></script>
-	<script type="module" src="src/editor/inspectWidget.js"></script>
-	<script type="module" src="src/game/game.js"></script>
-	<script type="module" src="src/editor/coordinators.js"></script>
-	<script type="module" src="src/editor/undoManager.js"></script>
-</head>
-<body>
-<div id="main" style="position: relative; overflow: hidden">
-	<div id="mainBar">
-		<div id="menu-bar" style="display: flex; gap: 15px; flex-grow: 1; align-items: center;"></div>
-		<div id="replay-container" style="display: flex; gap: 10px; align-items: center;">
-			<span>Replay</span>
-			<button id="replayBack">◀ Back</button>
-			<button id="replayForward">Forward ▶</button>
-			<span id="replayInfo"></span>
+		<script type="module" src="src/app.js"></script>
+		<script type="module" src="src/config.js"></script>
+		<script type="module" src="src/gui.js"></script>
+		<script type="module" src="src/editor/historyNode.js"></script>
+		<script type="module" src="src/editor/monstersEditor.js"></script>
+		<script type="module" src="src/editor/configWidget.js"></script>
+		<script type="module" src="src/editor/connectionWidget.js"></script>
+		<script type="module" src="src/editor/replayWidget.js"></script>
+		<script type="module" src="src/editor/collabWidget.js"></script>
+		<script type="module" src="src/editor/menuWidget.js"></script>
+		<script type="module" src="src/editor/mapEditor.js"></script>
+		<script type="module" src="src/editor/inspectWidget.js"></script>
+		<script type="module" src="src/game/game.js"></script>
+		<script type="module" src="src/editor/coordinators.js"></script>
+		<script type="module" src="src/editor/undoManager.js"></script>
+	</head>
+	<body>
+		<div id="main" style="position: relative; overflow: hidden">
+			<div id="mainBar">
+				<div id="menu-bar" style="display: flex; gap: 15px; flex-grow: 1; align-items: center"></div>
+				<div id="replay-container" style="display: flex; gap: 10px; align-items: center">
+					<span>Replay</span>
+					<button id="replayBack">◀ Back</button>
+					<button id="replayForward">Forward ▶</button>
+					<span id="replayInfo"></span>
+				</div>
+			</div>
+
+			<div id="mainLayout"></div>
+			<div id="gameView" style="display: none; width: 100%; height: 100%; flex-direction: column"></div>
 		</div>
-	</div>
-
-
-	<div id="mainLayout"></div>
-	<div id="gameView" style="display: none; width: 100%; height: 100%; flex-direction: column;"></div>
-</div>
-</body>
+	</body>
 </html>

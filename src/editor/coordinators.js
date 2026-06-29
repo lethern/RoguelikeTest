@@ -1,10 +1,10 @@
-import {wsConnection} from "../connection.js";
-import {HistoryNode} from "./historyNode.js";
-import {editorActionsPersistence, editorActions} from './actionsManager.js';
-import {collabPopupManager} from './collabWidget.js'
-import {gui} from "../gui.js";
-import {editorPersistenceManager} from "./persistenceManager.js";
-import {GuiEvents, EditorActionsEvents, ConnectionEvents} from "./editorEvents.js";
+import { wsConnection } from "../connection.js";
+import { HistoryNode } from "./historyNode.js";
+import { editorActionsPersistence, editorActions } from "./actionsManager.js";
+import { collabPopupManager } from "./collabWidget.js";
+import { gui } from "../gui.js";
+import { editorPersistenceManager } from "./persistenceManager.js";
+import { GuiEvents, EditorActionsEvents, ConnectionEvents } from "./editorEvents.js";
 
 class LayoutSyncCoordinator {
 	#gui;
@@ -18,7 +18,7 @@ class LayoutSyncCoordinator {
 	}
 
 	#attachListeners() {
-		this.#gui.on(GuiEvents.MAIN_LAYOUT_RESIZE, ({width, height}) => {
+		this.#gui.on(GuiEvents.MAIN_LAYOUT_RESIZE, ({ width, height }) => {
 			if (this.#connection.getIsMaster()) {
 				//this.#connection.send({ type: "size", width, height });
 			}
@@ -26,11 +26,9 @@ class LayoutSyncCoordinator {
 	}
 }
 
-
 const layoutSync = new LayoutSyncCoordinator(gui, wsConnection);
 
 //////////
-
 
 class ActionSyncCoordinator {
 	constructor() {
@@ -39,20 +37,22 @@ class ActionSyncCoordinator {
 	}
 
 	#setupActionsListeners() {
-		editorActions.on(EditorActionsEvents.COMMAND_ADDED, /** @param {HistoryNode} node
-				@param {{sendWs: boolean, savePersistant: boolean}} */(node, {sendWs, savePersistant}) =>
-		{
-			if (savePersistant) {
-				editorActionsPersistence.saveNode(node);
-				editorPersistenceManager.incrementActionCount();
-			}
-			if (sendWs && collabPopupManager.isSharingActive()) {
-				const msg = {type: "action", data: node.serialize()};
-				wsConnection.sendToPeer(msg);
-			}
-		});
+		editorActions.on(
+			EditorActionsEvents.COMMAND_ADDED,
+			/** @param {HistoryNode} node
+				@param {{sendWs: boolean, savePersistant: boolean}} */ (node, { sendWs, savePersistant }) => {
+				if (savePersistant) {
+					editorActionsPersistence.saveNode(node);
+					editorPersistenceManager.incrementActionCount();
+				}
+				if (sendWs && collabPopupManager.isSharingActive()) {
+					const msg = { type: "action", data: node.serialize() };
+					wsConnection.sendToPeer(msg);
+				}
+			},
+		);
 
-		editorActions.on(EditorActionsEvents.COMMAND_MODIFIED, (node, {sendWs, savePersistant}, commandData) => {
+		editorActions.on(EditorActionsEvents.COMMAND_MODIFIED, (node, { sendWs, savePersistant }, commandData) => {
 			if (savePersistant) {
 				editorActionsPersistence.updateNode(node);
 			}
@@ -61,7 +61,7 @@ class ActionSyncCoordinator {
 				const msg = {
 					type: "action_append",
 					seqN: node.seqN,
-					data: commandData
+					data: commandData,
 				};
 				wsConnection.sendToPeer(msg);
 			}
@@ -70,14 +70,14 @@ class ActionSyncCoordinator {
 		editorActions.on(EditorActionsEvents.STEP_BACK, (sendNotif) => {
 			editorActionsPersistence.saveCurrentSeqN(editorActions.getCurrentNode().seqN);
 			if (sendNotif && collabPopupManager.isSharingActive()) {
-				wsConnection.sendToPeer({type: "replay", actionType: "stepBack"});
+				wsConnection.sendToPeer({ type: "replay", actionType: "stepBack" });
 			}
 		});
 
 		editorActions.on(EditorActionsEvents.STEP_FORWARD, (sendNotif) => {
 			editorActionsPersistence.saveCurrentSeqN(editorActions.getCurrentNode().seqN);
 			if (sendNotif && collabPopupManager.isSharingActive()) {
-				wsConnection.sendToPeer({type: "replay", actionType: "stepForward"});
+				wsConnection.sendToPeer({ type: "replay", actionType: "stepForward" });
 			}
 		});
 	}
@@ -94,10 +94,8 @@ class ActionSyncCoordinator {
 					current.command.appendAndExecute(msg.data);
 					editorActionsPersistence.saveNode(current);
 				} else {
-					console.warn('Sync conflict on append - forcing full sync');
-					collabPopupManager.isMaster()
-						? collabPopupManager.forceFullSync()
-						: collabPopupManager.requestFullSync();
+					console.warn("Sync conflict on append - forcing full sync");
+					collabPopupManager.isMaster() ? collabPopupManager.forceFullSync() : collabPopupManager.requestFullSync();
 				}
 			}
 			if (msg.type === "replay" && collabPopupManager.isSharingActive()) {
@@ -117,10 +115,10 @@ class ActionSyncCoordinator {
 			console.warn(`Conflict detected: received node parent (${serializedNode.parId}) != current node (${current.seqN})`);
 
 			if (collabPopupManager.isMaster()) {
-				console.log('Master: Dropping follower action due to conflict - forcing full sync');
+				console.log("Master: Dropping follower action due to conflict - forcing full sync");
 				collabPopupManager.forceFullSync();
 			} else {
-				console.log('Follower: Dropping local action and requesting full sync');
+				console.log("Follower: Dropping local action and requesting full sync");
 				collabPopupManager.requestFullSync();
 			}
 			return;
@@ -132,7 +130,7 @@ class ActionSyncCoordinator {
 			editorActionsPersistence.saveNode(node);
 			editorActions.dispatchDeserialized(node);
 		} else {
-			console.warn('Cannot deserialize node - forcing full sync');
+			console.warn("Cannot deserialize node - forcing full sync");
 			if (collabPopupManager.isMaster()) {
 				collabPopupManager.forceFullSync();
 			} else {

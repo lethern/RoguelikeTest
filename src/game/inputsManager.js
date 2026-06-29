@@ -1,11 +1,17 @@
-import {getCommandFromKey} from "./commands.js";
-import {config} from "../config.js";
+import { getCommandFromKey } from "./commands.js";
+import { config } from "../config.js";
 
 const InputsManagerConfig = Object.freeze({
-	KEY_REPEAT_DELAY:  "KEY_REPEAT_DELAY",
+	KEY_REPEAT_DELAY: "KEY_REPEAT_DELAY",
 });
 
-config.addConfigVar(InputsManagerConfig.KEY_REPEAT_DELAY, 200, "Time in milliseconds to wait before another key press is registered, while holding down a key", 'keyRepeatDelay', 'InputsManagerConfig');
+config.addConfigVar(
+	InputsManagerConfig.KEY_REPEAT_DELAY,
+	200,
+	"Time in milliseconds to wait before another key press is registered, while holding down a key",
+	"keyRepeatDelay",
+	"InputsManagerConfig",
+);
 
 export class InputsManager {
 	#keyboardEnabled = false;
@@ -16,8 +22,7 @@ export class InputsManager {
 		this.#commandsManager = commandsManager;
 	}
 
-	init() {
-	}
+	init() {}
 
 	keyDown(key) {
 		if (!this.#keyboardEnabled) return;
@@ -27,7 +32,7 @@ export class InputsManager {
 
 		this.#heldKeys.set(command, {
 			started: performance.now(),
-			lastProcessed: 0
+			lastProcessed: 0,
 		});
 	}
 

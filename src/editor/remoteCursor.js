@@ -1,5 +1,5 @@
-import {rtcConnection} from '../connection.js';
-import {ConnectionRTCEvents} from "./editorEvents.js";
+import { rtcConnection } from "../connection.js";
+import { ConnectionRTCEvents } from "./editorEvents.js";
 
 class RemoteCursor {
 	#remoteCursor;
@@ -95,8 +95,8 @@ class RemoteCursor {
 			this.#posY += this.#springVelY;
 
 			if (this.#remoteCursor) {
-				this.#remoteCursor.style.left = this.#posX+3 + "px";
-				this.#remoteCursor.style.top = this.#posY+7 + "px";
+				this.#remoteCursor.style.left = this.#posX + 3 + "px";
+				this.#remoteCursor.style.top = this.#posY + 7 + "px";
 			}
 
 			this.#animationFrameId = requestAnimationFrame(animate);

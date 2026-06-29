@@ -1,6 +1,5 @@
-
 export class HistoryNode {
-	/** @type number */seqN;
+	/** @type number */ seqN;
 	/** @type {BaseCommand} */ command;
 	/** @type {HistoryNode} */ parent = null;
 	/** @type {array[HistoryNode]} */ children = [];
@@ -28,9 +27,9 @@ export class HistoryNode {
 			seqN: this.seqN,
 			time: this.timestamp,
 			parId: this.parent ? this.parent.seqN : null,
-			chIds: this.children.map(child => child.seqN),
+			chIds: this.children.map((child) => child.seqN),
 			_class: this.command ? this.command.serializeClass() : null,
-			_data: this.command ? this.command.serialize() : null
+			_data: this.command ? this.command.serialize() : null,
 		};
 	}
 
@@ -40,7 +39,7 @@ export class HistoryNode {
 		const node = new HistoryNode(data.seqN, command);
 		node.timestamp = data.time;
 
-		if (data.chIds.length !== 0 || data.parId !== current.seqN){
+		if (data.chIds.length !== 0 || data.parId !== current.seqN) {
 			return null;
 		}
 
@@ -51,9 +50,9 @@ export class HistoryNode {
 	static deserializeList(serializedNodes) {
 		const nodeMap = new Map();
 
-		serializedNodes.forEach(data => {
+		serializedNodes.forEach((data) => {
 			let command = null;
-			if(data._class){
+			if (data._class) {
 				command = commandRegistry.deserialize(data._class, data._data);
 			}
 
@@ -72,7 +71,7 @@ export class HistoryNode {
 				}
 			}
 
-			data.chIds.forEach(childId => {
+			data.chIds.forEach((childId) => {
 				if (nodeMap.has(childId)) {
 					const childNode = nodeMap.get(childId).node;
 					if (!node.children.includes(childNode)) {
@@ -82,7 +81,7 @@ export class HistoryNode {
 			});
 		});
 
-		return Array.from(nodeMap.values()).map(entry => entry.node);
+		return Array.from(nodeMap.values()).map((entry) => entry.node);
 	}
 }
 
@@ -91,11 +90,21 @@ export class BaseCommand {
 		this.data = data;
 		this.isUiSkip = false;
 	}
-	execute() { throw new Error("Not implemented"); }
-	undo() { throw new Error("Not implemented"); }
-	canAppend(baseConfig, maxItems) { return false; }
-	appendAndExecute(paintItem) { throw new Error("Not implemented"); }
-	serializeClass() { return this.constructor.name; }
+	execute() {
+		throw new Error("Not implemented");
+	}
+	undo() {
+		throw new Error("Not implemented");
+	}
+	canAppend(baseConfig, maxItems) {
+		return false;
+	}
+	appendAndExecute(paintItem) {
+		throw new Error("Not implemented");
+	}
+	serializeClass() {
+		return this.constructor.name;
+	}
 
 	/** @returns {object} */
 	serialize() {

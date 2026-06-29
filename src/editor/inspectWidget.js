@@ -1,17 +1,17 @@
-import {gui} from "../gui.js";
+import { gui } from "../gui.js";
 
 class InspectWidget {
 	constructor(container) {
 		this.container = container;
-		this.rootElement = document.createElement('div');
-		this.rootElement.style.cssText = 'padding: 10px; font-family: monospace; font-size: 12px; color: #e5e7eb; white-space: pre; overflow: auto; max-height: 100%;';
+		this.rootElement = document.createElement("div");
+		this.rootElement.style.cssText =
+			"padding: 10px; font-family: monospace; font-size: 12px; color: #e5e7eb; white-space: pre; overflow: auto; max-height: 100%;";
 		this.buildUI();
 		this.container.element.appendChild(this.rootElement);
 
-		this.btnRefresh = this.rootElement.querySelector('#btnRefresh');
-		this.btnRefresh.addEventListener('click', () => this.refresh());
-		this.container.on('destroy', () => {
-		});
+		this.btnRefresh = this.rootElement.querySelector("#btnRefresh");
+		this.btnRefresh.addEventListener("click", () => this.refresh());
+		this.container.on("destroy", () => {});
 	}
 
 	buildUI() {
@@ -28,18 +28,18 @@ class InspectWidget {
 	}
 
 	refresh() {
-		const output = this.rootElement.querySelector('#layoutOutput');
+		const output = this.rootElement.querySelector("#layoutOutput");
 		try {
 			const layout = gui.getLastLayoutSave();
 			output.textContent = JSON.stringify(layout, null, 2);
 		} catch (e) {
-			output.textContent = 'Error: ' + e.message;
+			output.textContent = "Error: " + e.message;
 		}
 	}
 }
 
 function initInspectWidget() {
-	gui.registerComponent('Inspect', 'Layout Inspector', 'Dev', (container) => {
+	gui.registerComponent("Inspect", "Layout Inspector", "Dev", (container) => {
 		new InspectWidget(container);
 	});
 }

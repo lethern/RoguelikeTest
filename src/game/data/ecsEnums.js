@@ -1,4 +1,3 @@
-
 /** @readonly */
 export const EVENTS = {
 	// movement

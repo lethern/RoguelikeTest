@@ -1,7 +1,7 @@
-import {BaseCommand, commandRegistry} from './historyNode.js';
-import {editorActions} from './actionsManager.js';
-import {gui} from "../gui.js";
-import {config} from "../config.js";
+import { BaseCommand, commandRegistry } from "./historyNode.js";
+import { editorActions } from "./actionsManager.js";
+import { gui } from "../gui.js";
+import { config } from "../config.js";
 
 class ConfigUpdateCommand extends BaseCommand {
 	constructor(data) {
@@ -29,13 +29,13 @@ class ConfigWidget {
 
 	init(container) {
 		this.container = container;
-		this.rootElement = document.createElement('div');
-		this.rootElement.className = 'config-editor-widget editor-panel';
-		this.rootElement.style.padding = '10px';
+		this.rootElement = document.createElement("div");
+		this.rootElement.className = "config-editor-widget editor-panel";
+		this.rootElement.style.padding = "10px";
 		this.container.element.appendChild(this.rootElement);
 		this.buildUI();
 		this.refreshUI();
-		container.on('destroy', () => this.destroy());
+		container.on("destroy", () => this.destroy());
 	}
 
 	destroy() {
@@ -53,48 +53,50 @@ class ConfigWidget {
 				<div id="configList" class="editor-main" style="flex: 1; overflow-y: auto; padding: 10px;"></div>
 			</div>
 		`;
-		this.rootElement.querySelector('#searchConfigName').addEventListener('input', () => this.refreshUI());
+		this.rootElement.querySelector("#searchConfigName").addEventListener("input", () => this.refreshUI());
 	}
 
 	refreshUI() {
 		if (!this.rootElement) return;
-		const list = this.rootElement.querySelector('#configList');
-		list.innerHTML = '';
-		const searchNameEl = this.rootElement.querySelector('#searchConfigName');
-		const nameQuery = searchNameEl ? searchNameEl.value.toLowerCase() : '';
+		const list = this.rootElement.querySelector("#configList");
+		list.innerHTML = "";
+		const searchNameEl = this.rootElement.querySelector("#searchConfigName");
+		const nameQuery = searchNameEl ? searchNameEl.value.toLowerCase() : "";
 
 		const allConfigs = config.getAllConfigVars();
-		const filteredConfigs = allConfigs.filter(conf => {
+		const filteredConfigs = allConfigs.filter((conf) => {
 			return conf.friendlyName.toLowerCase().includes(nameQuery) || conf.name.toLowerCase().includes(nameQuery);
 		});
 
 		const grouped = {};
 		for (const conf of filteredConfigs) {
-			const group = conf.groupName || 'Ungrouped';
+			const group = conf.groupName || "Ungrouped";
 			if (!grouped[group]) grouped[group] = [];
 			grouped[group].push(conf);
 		}
 
 		for (const group in grouped) {
-			const groupDiv = document.createElement('div');
-			groupDiv.className = 'config-group-header';
+			const groupDiv = document.createElement("div");
+			groupDiv.className = "config-group-header";
 			groupDiv.textContent = group;
 			list.appendChild(groupDiv);
 
 			for (const conf of grouped[group]) {
-				const row = document.createElement('div');
-				row.className = 'config-row';
+				const row = document.createElement("div");
+				row.className = "config-row";
 
 				row.innerHTML = `
 					<span>${conf.friendlyName}</span>
 					<input type="text" value="${conf.value}" data-name="${conf.name}" class="config-val-input">
 					<span style="color: #888;">${conf.desc}</span>
 				`;
-				row.querySelector('.config-val-input').addEventListener('change', (e) => {
-					editorActions.dispatch(new ConfigUpdateCommand({
-						name: e.target.dataset.name,
-						newValue: e.target.value
-					}));
+				row.querySelector(".config-val-input").addEventListener("change", (e) => {
+					editorActions.dispatch(
+						new ConfigUpdateCommand({
+							name: e.target.dataset.name,
+							newValue: e.target.value,
+						}),
+					);
 				});
 				list.appendChild(row);
 			}

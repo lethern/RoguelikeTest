@@ -1,5 +1,5 @@
-import {config} from "../config.js";
-import {globalStore} from "../globalStore.js";
+import { config } from "../config.js";
+import { globalStore } from "../globalStore.js";
 
 const GameConfig = Object.freeze({
 	FOV_RAY_SOFTENING: "FOV_RAY_SOFTENING",
@@ -8,8 +8,14 @@ const GameDebugConfig = Object.freeze({
 	SHOW_FOV_RAYS: "SHOW_FOV_RAYS",
 });
 
-config.addConfigVar(GameConfig.FOV_RAY_SOFTENING, 0.3, 'Lower value: better looking around corner, higher: walls obstruct more. Ideal value: 0.2 - 0.3. Range: 0.0 - 1.0', 'fovRaySoftening', 'GameConfig');
-config.addConfigVar(GameDebugConfig.SHOW_FOV_RAYS, false, 'Show FoV rays', 'showFovRays', 'GameDebugConfig');
+config.addConfigVar(
+	GameConfig.FOV_RAY_SOFTENING,
+	0.3,
+	"Lower value: better looking around corner, higher: walls obstruct more. Ideal value: 0.2 - 0.3. Range: 0.0 - 1.0",
+	"fovRaySoftening",
+	"GameConfig",
+);
+config.addConfigVar(GameDebugConfig.SHOW_FOV_RAYS, false, "Show FoV rays", "showFovRays", "GameDebugConfig");
 
 export class GameRenderer {
 	#toRender = false;
@@ -22,10 +28,10 @@ export class GameRenderer {
 	}
 
 	init() {
-		this.rootElement = document.getElementById('gameView');
-		this.canvas = document.createElement('canvas');
-		this.canvas.className = 'gameCanvas';
-		this.ctx = this.canvas.getContext('2d');
+		this.rootElement = document.getElementById("gameView");
+		this.canvas = document.createElement("canvas");
+		this.canvas.className = "gameCanvas";
+		this.ctx = this.canvas.getContext("2d");
 		this.rootElement.appendChild(this.canvas);
 
 		this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -33,14 +39,14 @@ export class GameRenderer {
 	}
 
 	resize() {
-		if(!this.rootElement) return;
+		if (!this.rootElement) return;
 		this.canvas.width = this.rootElement.clientWidth;
 		this.canvas.height = this.rootElement.clientHeight;
 		this.render();
 	}
 
-	showGame(enabled){
-		if(enabled){
+	showGame(enabled) {
+		if (enabled) {
 			this.resize();
 			this.render();
 		}
@@ -50,8 +56,8 @@ export class GameRenderer {
 		this.#toRender = true;
 	}
 
-	tick(){
-		if(this.#toRender){
+	tick() {
+		if (this.#toRender) {
 			this.#toRender = false;
 			this.#doRender();
 		}
@@ -102,13 +108,12 @@ export class GameRenderer {
 	}
 	 */
 
-
-	static #FOVMarkVisible(fovSet, x,y){
+	static #FOVMarkVisible(fovSet, x, y) {
 		fovSet.add((y << 16) | x);
 	}
 
-	static #FOVIsVisible(fovSet, x,y){
-		return fovSet.has((y << 16) | x)
+	static #FOVIsVisible(fovSet, x, y) {
+		return fovSet.has((y << 16) | x);
 	}
 	#computeFOV(map, originX, originY, radius, fovSoftening) {
 		const visible = new Set();
@@ -177,8 +182,14 @@ export class GameRenderer {
 		};
 
 		const octants = [
-			[1, 0, 0, 1], [0, 1, 1, 0], [0, -1, 1, 0], [-1, 0, 0, 1],
-			[-1, 0, 0, -1], [0, -1, -1, 0], [0, 1, -1, 0], [1, 0, 0, -1]
+			[1, 0, 0, 1],
+			[0, 1, 1, 0],
+			[0, -1, 1, 0],
+			[-1, 0, 0, 1],
+			[-1, 0, 0, -1],
+			[0, -1, -1, 0],
+			[0, 1, -1, 0],
+			[1, 0, 0, -1],
 		];
 
 		for (const [xx, xy, yx, yy] of octants) {
@@ -190,15 +201,15 @@ export class GameRenderer {
 
 	#doRender() {
 		const ctx = this.ctx;
-		ctx.fillStyle = '#000';
+		ctx.fillStyle = "#000";
 		ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
 		const mapId = globalStore.state.gameSession.currMapId;
 		const map = globalStore.state.maps[mapId];
 
 		if (!map) {
-			ctx.fillStyle = '#FFF';
-			ctx.fillText('No map loaded', 10, 10);
+			ctx.fillStyle = "#FFF";
+			ctx.fillText("No map loaded", 10, 10);
 			return;
 		}
 
@@ -209,9 +220,9 @@ export class GameRenderer {
 		let fov = new Set();
 		if (player) {
 			const fovSoftening = config.getConfigValue(GameConfig.FOV_RAY_SOFTENING);
-			if(config.getConfigValue(GameDebugConfig.SHOW_FOV_RAYS)){
+			if (config.getConfigValue(GameDebugConfig.SHOW_FOV_RAYS)) {
 				this.#debugRays = [];
-			}else{
+			} else {
 				this.#debugRays = undefined;
 			}
 			fov = this.#computeFOV(map, player.Position.x, player.Position.y, 20, fovSoftening);
@@ -226,30 +237,30 @@ export class GameRenderer {
 				if (!tileId) continue;
 				const tile = globalStore.state.tileDictionary[tileId];
 				if (!tile) continue;
-				const gTile = globalStore.state.graphicalTiles[tile.graphicalId] || {char: '?', color: '#FFF'};
+				const gTile = globalStore.state.graphicalTiles[tile.graphicalId] || { char: "?", color: "#FFF" };
 
 				ctx.fillStyle = gTile.color;
 				ctx.font = `${tileSize}px monospace`;
-				ctx.textAlign = 'center';
-				ctx.textBaseline = 'middle';
+				ctx.textAlign = "center";
+				ctx.textBaseline = "middle";
 				ctx.fillText(gTile.char, x * tileSize + tileSize / 2, y * tileSize + tileSize / 2);
 			}
 		}
 
 		// Render player
 		if (player) {
-			ctx.fillStyle = '#FFF';
+			ctx.fillStyle = "#FFF";
 			ctx.font = `${tileSize}px monospace`;
-			ctx.fillText('@', player.Position.x * tileSize + tileSize / 2, player.Position.y * tileSize + tileSize / 2);
+			ctx.fillText("@", player.Position.x * tileSize + tileSize / 2, player.Position.y * tileSize + tileSize / 2);
 		}
 
 		if (this.#debugRays) {
-			ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+			ctx.strokeStyle = "rgba(255, 0, 0, 0.3)";
 			ctx.lineWidth = 1;
 			for (const ray of this.#debugRays) {
 				ctx.beginPath();
-				ctx.moveTo(ray.x1 * tileSize + tileSize/2, ray.y1 * tileSize + tileSize/2);
-				ctx.lineTo(ray.x2 * tileSize + tileSize/2, ray.y2 * tileSize + tileSize/2);
+				ctx.moveTo(ray.x1 * tileSize + tileSize / 2, ray.y1 * tileSize + tileSize / 2);
+				ctx.lineTo(ray.x2 * tileSize + tileSize / 2, ray.y2 * tileSize + tileSize / 2);
 				ctx.stroke();
 			}
 			this.#debugRays = [];

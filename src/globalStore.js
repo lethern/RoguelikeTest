@@ -1,5 +1,6 @@
-import {editorPersistenceManager} from './editor/persistenceManager.js';
-import {EditorPersistenceEvents} from "./editor/editorEvents.js";
+import { editorPersistenceManager } from "./editor/persistenceManager.js";
+import { EditorPersistenceEvents } from "./editor/editorEvents.js";
+import { compressMap, decompressMap } from "./utils/mapCompression.js";
 
 export const GameStateKeys = {
 	AttributesConfig: "AttributesConfig",
@@ -54,11 +55,19 @@ class GlobalStore {
 
 	#initPersistence() {
 		const saveFn = (components) => {
-			components.globalStore = this.state;
+			const stateCopy = JSON.parse(JSON.stringify(this.state));
+			for (const mapId in stateCopy.maps) {
+				stateCopy.maps[mapId].tiles = compressMap(stateCopy.maps[mapId]);
+			}
+			components.globalStore = stateCopy;
 		};
 		const loadFn = (components) => {
 			if (components.globalStore) {
-				this.setState(components.globalStore);
+				const state = JSON.parse(JSON.stringify(components.globalStore));
+				for (const mapId in state.maps) {
+					state.maps[mapId].tiles = decompressMap(state.maps[mapId].tiles, state.maps[mapId].width);
+				}
+				this.setState(state);
 			}
 		};
 		editorPersistenceManager.on(EditorPersistenceEvents.SAVE_LOCAL, saveFn);
@@ -67,59 +76,30 @@ class GlobalStore {
 		editorPersistenceManager.on(EditorPersistenceEvents.LOAD_DISK, loadFn);
 	}
 
-	/**
-	 * @param {GlobalState} newState
-	 */
+	/** @param {GlobalState} newState */
 	setState(newState) {
 		this.state = newState;
 		this.notifyAll();
 	}
 
-	/**
-	 * @param {string} key
-	 * @param {function(GlobalState):void} callback
-	 */
+	/** @param {string} key
+	 * @param {function(GlobalState):void} callback */
 	subscribe(key, callback) {
 		//this.listeners.push(callback);
 		if (!this.listeners[key]) this.listeners[key] = new Set();
 		this.listeners[key].add(callback);
 	}
 
-	/**
-	 * @param {string} key
-	 */
+	/** @param {string} key */
 	notify(key) {
-		this.listeners[key]?.forEach(cb => cb(this.state));
+		this.listeners[key]?.forEach((cb) => cb(this.state));
 	}
 
 	notifyAll() {
-		Object.values(this.listeners).forEach(listenerSet => {
-			listenerSet.forEach(cb => cb(this.state));
+		Object.values(this.listeners).forEach((listenerSet) => {
+			listenerSet.forEach((cb) => cb(this.state));
 		});
 	}
-
-	//dispatch(action, sendWs = true) {
-	//	if (action.type === "attr_add") {
-	//		this.state.attributes[action.id] = { id: action.id, name: action.name, type: action.valType };
-	//	} else if (action.type === "attr_remove") {
-	//		delete this.state.attributes[action.id];
-	//	} else if (action.type === "attr_update") {
-	//		if (this.state.attributes[action.id]) {
-	//			this.state.attributes[action.id][action.field] = action.value;
-	//		}
-	//	} else if (action.type === "monster_modify_attribute") {
-	//		const m = this.state.monsters[action.monster_id];
-	//		if (m) {
-	//			if (!m.attrs) m.attrs = {};
-	//			m.attrs[action.attribute_id] = { type: action.valType, val: action.value };
-	//		}
-	//	}
-//
-	//	if (sendWs) {
-	//		connection.sendWsData({ type: "state_action", action: action });
-	//	}
-	//	this.notify();
-	//}
 }
 
 export const globalStore = new GlobalStore();

@@ -1,10 +1,9 @@
-import {StorageManager} from "../utils/storage.js";
-import {BaseCommand, HistoryNode} from "./historyNode.js";
+import { StorageManager } from "../utils/storage.js";
+import { BaseCommand, HistoryNode } from "./historyNode.js";
 import EventEmitter from "../utils/eventEmitter.js";
-import {editorPersistenceManager} from "./persistenceManager.js";
-import {EditorPersistenceEvents, EditorActionsEvents} from "./editorEvents.js";
-import {config} from "../config.js";
-
+import { editorPersistenceManager } from "./persistenceManager.js";
+import { EditorPersistenceEvents, EditorActionsEvents } from "./editorEvents.js";
+import { config } from "../config.js";
 
 export const SNAPSHOT_KEY = "action_history_snapshot";
 export const JOURNAL_KEY = "action_history_journal";
@@ -13,8 +12,13 @@ export const CURRENT_SEQ_KEY = "action_current_seq";
 const EditorActionsPersistenceConfig = Object.freeze({
 	MAX_NODES: "MAX_NODES",
 });
-config.addConfigVar(EditorActionsPersistenceConfig.MAX_NODES, 100, 'Maximum size of undo steps tree', 'editorUndoSteps', 'EditorActionsPersistenceConfig');
-
+config.addConfigVar(
+	EditorActionsPersistenceConfig.MAX_NODES,
+	100,
+	"Maximum size of undo steps tree",
+	"editorUndoSteps",
+	"EditorActionsPersistenceConfig",
+);
 
 class EditorActionsPersistence {
 	#loaded = false;
@@ -31,18 +35,14 @@ class EditorActionsPersistence {
 			this.loadNodes();
 		});
 
-		editorPersistenceManager.on(EditorPersistenceEvents.AFTER_LOAD_DISK, ()=>{
-			editorActions.replaceHistoryRefs(
-				editorActions.getCurrentNode(),
-				editorActions.getCurrentNode(),
-				editorActions.getCurrentNode()
-			);
+		editorPersistenceManager.on(EditorPersistenceEvents.AFTER_LOAD_DISK, () => {
+			editorActions.replaceHistoryRefs(editorActions.getCurrentNode(), editorActions.getCurrentNode(), editorActions.getCurrentNode());
 			editorPersistenceManager.saveLocal();
 		});
 	}
 
 	saveNode(/** @type {HistoryNode} */ node) {
-		if(!this.#loaded) return;
+		if (!this.#loaded) return;
 		const journal = StorageManager.get(JOURNAL_KEY) || [];
 		journal.push(node.serialize());
 
@@ -52,11 +52,11 @@ class EditorActionsPersistence {
 	}
 
 	updateNode(node) {
-		if(!this.#loaded) return;
+		if (!this.#loaded) return;
 
 		const journal = StorageManager.get(JOURNAL_KEY) || [];
 
-		const index = journal.findIndex(n => n.seqN === node.seqN);
+		const index = journal.findIndex((n) => n.seqN === node.seqN);
 
 		if (index !== -1) {
 			journal[index] = node.serialize();
@@ -67,7 +67,7 @@ class EditorActionsPersistence {
 	}
 
 	saveCurrentSeqN(seqN) {
-		if(!this.#loaded) return;
+		if (!this.#loaded) return;
 		StorageManager.set(CURRENT_SEQ_KEY, seqN);
 	}
 
@@ -85,14 +85,16 @@ class EditorActionsPersistence {
 		const allNodes = HistoryNode.deserializeList(allNodesData);
 		const { completeNodes, incompleteNodes, newRoot, currentNode, endNode, activePath } = this.#prune(allNodes, storedCurrentSeqN);
 
-		activePath.filter(node => node.command)
-			.forEach(node => editorActions.dispatchDeserialized(node));
+		activePath.filter((node) => node.command).forEach((node) => editorActions.dispatchDeserialized(node));
 
 		this.#persistSnapshot(completeNodes, incompleteNodes, newRoot, currentNode, endNode);
 	}
 
 	saveNodes() {
-		const { completeNodes, incompleteNodes, newRoot, currentNode, endNode } = this.#prune(editorActions.getAllNodes(), editorActions.getCurrentNode());
+		const { completeNodes, incompleteNodes, newRoot, currentNode, endNode } = this.#prune(
+			editorActions.getAllNodes(),
+			editorActions.getCurrentNode(),
+		);
 		this.#persistSnapshot(completeNodes, incompleteNodes, newRoot, currentNode, endNode);
 	}
 
@@ -103,7 +105,7 @@ class EditorActionsPersistence {
 
 		let endNode = allNodes[0];
 		let currentNode = null;
-		if (typeof currentIndicator === 'object') {
+		if (typeof currentIndicator === "object") {
 			currentNode = currentIndicator;
 			currentIndicator = undefined;
 		}
@@ -148,8 +150,9 @@ class EditorActionsPersistence {
 			while (nodesCount > targetCount && root && root !== currentNode) {
 				if (root.children.length === 0) break;
 
-				const nextRoot = root.children.find(child => activeSet.has(child.seqN))
-					|| root.children.reduce((lowest, child) => (!lowest || child.seqN < lowest.seqN) ? child : lowest);
+				const nextRoot =
+					root.children.find((child) => activeSet.has(child.seqN)) ||
+					root.children.reduce((lowest, child) => (!lowest || child.seqN < lowest.seqN ? child : lowest));
 
 				nodesToRemove.add(root);
 				nodesCount--;
@@ -165,7 +168,7 @@ class EditorActionsPersistence {
 				root = nextRoot;
 			}
 
-			nodesToRemove.forEach(node => {
+			nodesToRemove.forEach((node) => {
 				node.parent = null;
 				node.children = [];
 			});
@@ -185,7 +188,7 @@ class EditorActionsPersistence {
 			}
 
 			if (node.parent === null) {
-				if(newRoot !== undefined) console.log(`2nd newRoot ${newRoot.seqN}, ${node.seqN}`);
+				if (newRoot !== undefined) console.log(`2nd newRoot ${newRoot.seqN}, ${node.seqN}`);
 				newRoot = node;
 			}
 		}
@@ -194,10 +197,13 @@ class EditorActionsPersistence {
 	}
 
 	#persistSnapshot(completeNodes, incompleteNodes, newRoot, currentNode, endNode) {
-		StorageManager.set(SNAPSHOT_KEY, completeNodes.map(n => n.serialize()));
+		StorageManager.set(
+			SNAPSHOT_KEY,
+			completeNodes.map((n) => n.serialize()),
+		);
 
 		// save incomplete nodes into journal
-		const journalData = incompleteNodes.map(n => n.serialize());
+		const journalData = incompleteNodes.map((n) => n.serialize());
 		StorageManager.set(JOURNAL_KEY, journalData);
 
 		this.saveCurrentSeqN(currentNode.seqN);
@@ -207,8 +213,7 @@ class EditorActionsPersistence {
 
 export const editorActionsPersistence = new EditorActionsPersistence();
 
-
-class EditorActions extends EventEmitter{
+class EditorActions extends EventEmitter {
 	#commandIdSeq = 1;
 	/** @type {HistoryNode} */
 	#commandsHistoryCurrent;
@@ -225,7 +230,7 @@ class EditorActions extends EventEmitter{
 
 	/** @param {BaseCommand} command
 	 * @param {{sendWs: boolean, savePersistant: boolean}} config */
-	dispatch(command, config = {sendWs: true, savePersistant: true}) {
+	dispatch(command, config = { sendWs: true, savePersistant: true }) {
 		command.execute();
 
 		this.recordDispatched(command, config);
@@ -236,23 +241,18 @@ class EditorActions extends EventEmitter{
 	 * @param {Object} uniqueData - unique data (appended to previous entry)
 	 * @param {number} maxItems - Maximum stacked items before splitting
 	 */
-	dispatchOrAppend(CommandClass, basicData, uniqueData, maxItems = 10, config = {sendWs: true, savePersistant: true}) {
+	dispatchOrAppend(CommandClass, basicData, uniqueData, maxItems = 10, config = { sendWs: true, savePersistant: true }) {
 		const currentCommand = this.#commandsHistoryCurrent.command;
 
 		if (currentCommand.canAppend && currentCommand.canAppend(basicData, maxItems)) {
 			currentCommand.appendAndExecute(uniqueData);
-			this.emit(
-				EditorActionsEvents.COMMAND_MODIFIED,
-				this.#commandsHistoryCurrent,
-				config,
-				uniqueData
-			);
+			this.emit(EditorActionsEvents.COMMAND_MODIFIED, this.#commandsHistoryCurrent, config, uniqueData);
 			return;
 		}
 
 		const newCommand = new CommandClass({
 			...basicData,
-			paints: [uniqueData]
+			paints: [uniqueData],
 		});
 
 		this.dispatch(newCommand, config);
@@ -260,9 +260,9 @@ class EditorActions extends EventEmitter{
 
 	/** @param {BaseCommand} command
 	 * @param {{sendWs: boolean, savePersistant: boolean}} config */
-	recordDispatched(command, config = {sendWs: true, savePersistant: true}) {
+	recordDispatched(command, config = { sendWs: true, savePersistant: true }) {
 		this.#pushCommand(command, config);
-		console.log('recordDispatched ', command);
+		console.log("recordDispatched ", command);
 
 		this.emit(EditorActionsEvents.COMMAND_DISPATCHED, command, config);
 	}
@@ -289,9 +289,9 @@ class EditorActions extends EventEmitter{
 	}
 
 	#updateHistoryPointers(newCurrent) {
-		if(newCurrent.parent !== this.#commandsHistoryCurrent) return;
+		if (newCurrent.parent !== this.#commandsHistoryCurrent) return;
 
-		if(this.#commandsHistoryEnd === this.#commandsHistoryCurrent) {
+		if (this.#commandsHistoryEnd === this.#commandsHistoryCurrent) {
 			this.#commandsHistoryEnd = newCurrent;
 		}
 		this.#commandsHistoryCurrent = newCurrent;
@@ -301,36 +301,36 @@ class EditorActions extends EventEmitter{
 		}
 	}
 
-	stepBack(sendNotif = true){
-		if(this.#commandsHistoryCurrent === this.#commandsHistoryEnd) {
+	stepBack(sendNotif = true) {
+		if (this.#commandsHistoryCurrent === this.#commandsHistoryEnd) {
 			//inputsManager.setKeyboardEnabled(false);
 		}
 		const current = this.#commandsHistoryCurrent;
-		if(!current.parent) return;
+		if (!current.parent) return;
 
 		this.#commandsHistoryCurrent = current.parent;
 
-		console.log("stepBack ", current.command)
+		console.log("stepBack ", current.command);
 		current.command.undo();
 
 		this.emit(EditorActionsEvents.STEP_BACK, sendNotif);
 
-		if(this.#commandsHistoryCurrent.command.isUiSkip){
+		if (this.#commandsHistoryCurrent.command.isUiSkip) {
 			this.stepBack(sendNotif);
 		}
 	}
 
-	stepForward(sendNotif = true){
+	stepForward(sendNotif = true) {
 		const next = this.#commandsHistoryCurrent.getLatestChild();
-		if(!next) return;
+		if (!next) return;
 
-		console.log("stepForward ", next.command)
+		console.log("stepForward ", next.command);
 		this.#commandsHistoryCurrent = next;
 		next.command.execute();
 
 		this.emit(EditorActionsEvents.STEP_FORWARD, sendNotif);
 
-		if(next.command.isUiSkip){
+		if (next.command.isUiSkip) {
 			this.stepForward(sendNotif);
 		}
 	}
@@ -349,7 +349,7 @@ class EditorActions extends EventEmitter{
 		const root = this.getHistoryRoot();
 		const allNodes = [];
 		const queue = [root];
-		while(queue.length > 0){
+		while (queue.length > 0) {
 			const node = queue.shift();
 			allNodes.push(node);
 			queue.push(...node.children);
@@ -357,7 +357,7 @@ class EditorActions extends EventEmitter{
 		return allNodes;
 	}
 
-	getLastNode(){
+	getLastNode() {
 		return this.#commandsHistoryEnd;
 	}
 
@@ -365,8 +365,8 @@ class EditorActions extends EventEmitter{
 		if (historyNodes.length === 0) return;
 
 		this.#commandsHistoryStart = historyNodes[0];
-		this.#commandsHistoryEnd = historyNodes.find(node => node.seqN === endSeqN);
-		this.#commandsHistoryCurrent = historyNodes.find(node => node.seqN === currentSeqN);
+		this.#commandsHistoryEnd = historyNodes.find((node) => node.seqN === endSeqN);
+		this.#commandsHistoryCurrent = historyNodes.find((node) => node.seqN === currentSeqN);
 		this.#commandIdSeq = this.#commandsHistoryEnd.seqN + 1;
 		this.emit(EditorActionsEvents.HISTORY_REPLACED);
 	}
@@ -382,7 +382,6 @@ class EditorActions extends EventEmitter{
 		}
 		this.emit(EditorActionsEvents.HISTORY_REPLACED);
 	}
-
 }
 
 export const editorActions = new EditorActions();

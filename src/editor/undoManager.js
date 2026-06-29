@@ -1,5 +1,5 @@
-import {editorActions} from './actionsManager.js';
-import {EditorActionsEvents} from "./editorEvents.js";
+import { editorActions } from "./actionsManager.js";
+import { EditorActionsEvents } from "./editorEvents.js";
 
 class EditorUndoManager {
 	constructor() {
@@ -34,11 +34,11 @@ class EditorUndoManager {
 	}
 
 	getCommandName(command) {
-		if (!command) return '-';
+		if (!command) return "-";
 		if (command.constructor.friendlyName) {
 			return command.constructor.friendlyName;
 		}
-		return command.constructor.name || 'Command';
+		return command.constructor.name || "Command";
 	}
 
 	updateDisplay() {
@@ -46,9 +46,9 @@ class EditorUndoManager {
 		const prev = current.parent;
 		const next = current.getLatestChild();
 
-		const prevName = prev && prev.command ? this.getCommandName(prev.command) : '-';
-		const currName = current.command ? this.getCommandName(current.command) : '-';
-		const nextName = next ? this.getCommandName(next.command) : '-';
+		const prevName = prev && prev.command ? this.getCommandName(prev.command) : "-";
+		const currName = current.command ? this.getCommandName(current.command) : "-";
+		const nextName = next ? this.getCommandName(next.command) : "-";
 
 		let info = `Prev: ${prevName}  |  Curr: ${currName}`;
 
@@ -56,12 +56,11 @@ class EditorUndoManager {
 			info += `  |  Next: ${nextName}`;
 		}
 
-		if(current !== editorActions.getLastNode()){
+		if (current !== editorActions.getLastNode()) {
 			document.getElementById("replayInfo").textContent = info;
-		}else{
+		} else {
 			document.getElementById("replayInfo").textContent = null;
 		}
-
 	}
 }
 
