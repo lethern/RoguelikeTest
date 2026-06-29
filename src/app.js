@@ -19,19 +19,19 @@ class App{
 		const {gui} = await import('./gui.js');
 		gui.init();
 
-		const {inputsManager} = await import('./game/inputsManager.js');
-		inputsManager.init();
+		const {initTestWidget} = await import('./game/testWidget.js');
+		initTestWidget();
 
-		const {replayManager} = await import('./replay.js');
-		replayManager.init();
+		const {editorUndoManager} = await import('./editor/undoManager.js');
+		editorUndoManager.init();
 
 		//const {actionSyncCoordinator} = await import('./coordinators.js');
 		//actionSyncCoordinator.loadPersisted();
-		const {persistenceManager} = await import('./persistenceManager.js');
-		persistenceManager.load();
+		const {editorPersistenceManager} = await import('./editor/persistenceManager.js');
+		editorPersistenceManager.loadLocal();
 
-		const {gameRenderer} = await import('./game/game.js');
-		gameRenderer.init();
+		const {game} = await import('./game/game.js');
+		game.init();
 	}
 
 	#loadConfig(){

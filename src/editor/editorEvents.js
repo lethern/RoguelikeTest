@@ -1,17 +1,21 @@
 import EventEmitter from '../utils/eventEmitter.js';
 
-export const PersistenceEvents = {
-	SAVE: 'save',
-	LOAD: 'load',
-	AFTER_LOAD: 'afterLoad'
+export const EditorPersistenceEvents = {
+	SAVE_LOCAL: 'SAVE_LOCAL',
+	SAVE_DISK: 'SAVE_DISK',
+	LOAD_LOCAL: 'LOAD_LOCAL',
+	LOAD_DISK: 'LOAD_DISK',
+	AFTER_LOAD_LOCAL: 'AFTER_LOAD_LOCAL',
+	AFTER_LOAD_DISK: 'AFTER_LOAD_DISK',
 };
 
-export const HistoryEvents = {
+export const EditorActionsEvents = {
 	COMMAND_ADDED: 'commandAdded',
 	STEP_BACK: 'stepBack',
 	STEP_FORWARD: 'stepForward',
 	HISTORY_REPLACED: 'historyReplaced',
-	COMMAND_DISPATCHED: 'commandDispatched'
+	COMMAND_DISPATCHED: 'commandDispatched',
+	COMMAND_MODIFIED: 'commandModified',
 };
 
 export const GuiEvents = {

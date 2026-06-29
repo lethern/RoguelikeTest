@@ -1,5 +1,5 @@
-import {BaseCommand, commandRegistry} from '../historyNode.js';
-import {actions} from '../historyStorage.js';
+import {BaseCommand, commandRegistry} from './historyNode.js';
+import {editorActions} from './actionsManager.js';
 import {gui} from "../gui.js";
 import {globalStore, GameStateKeys} from "../globalStore.js";
 import {editorEvents, EditorEvents} from './editorEvents.js';
@@ -69,7 +69,7 @@ class AttributeConfigWidget {
 		if (e.target.dataset.action === 'add_attr') {
 			const newId = CryptoRandom.generateId();
 			//globalStore.dispatch({ type: "attr_add", id: newId, name: "New Attribute", valType: "single" });
-			actions.dispatch(new AttrAddCommand({ id: newId, name: "New Attribute", valType: "single" }));
+			editorActions.dispatch(new AttrAddCommand({ id: newId, name: "New Attribute", valType: "single" }));
 		} else if (e.target.dataset.action === 'remove_attr') {
 			const id = e.target.closest('.rl-row').dataset.id;
 			//globalStore.dispatch({ type: "attr_remove", id: id });
@@ -82,7 +82,7 @@ class AttributeConfigWidget {
 			const field = e.target.dataset.field;
 			const value = e.target.value;
 			//globalStore.dispatch({ type: "attr_update", id: id, field: field, value: value });
-			actions.dispatch(new AttrUpdateCommand({ id, field, newValue: value }));
+			editorActions.dispatch(new AttrUpdateCommand({ id, field, newValue: value }));
 		}
 	}
 }
@@ -342,14 +342,14 @@ class EntityEditorWidget {
 
 
 			const graphicalId = CryptoRandom.generateId();
-			actions.dispatch(new GraphicEntityAddCommand({
+			editorActions.dispatch(new GraphicEntityAddCommand({
 				id: graphicalId,
 				char,
 				color
 			}));
 			//////
 			const id = CryptoRandom.generateId();
-			actions.dispatch(new EntityAddCommand({
+			editorActions.dispatch(new EntityAddCommand({
 				category: this.activeCategory,
 				id,
 				name: 'New ' + (this.activeCategory === 'monsters' ? 'Monster' : this.activeCategory === 'items' ? 'Item' : 'Object'),
@@ -514,16 +514,16 @@ class EntityEditorWidget {
 		props.innerHTML = html;
 
 		props.querySelector('#entName').addEventListener('change', (e) => {
-			actions.dispatch(new EntityUpdateCommand({category: this.activeCategory, id, field: 'name', newValue: e.target.value}));
+			editorActions.dispatch(new EntityUpdateCommand({category: this.activeCategory, id, field: 'name', newValue: e.target.value}));
 		});
 
 		props.querySelector('#entChar').addEventListener('change', (e) => {
 			const val = e.target.value || '?';
-			actions.dispatch(new EntityGraphicUpdateCommand({graphicalId, field: 'char', newValue: val}));
+			editorActions.dispatch(new EntityGraphicUpdateCommand({graphicalId, field: 'char', newValue: val}));
 		});
 
 		props.querySelector('#entColor').addEventListener('change', (e) => {
-			actions.dispatch(new EntityGraphicUpdateCommand({graphicalId, field: 'color', newValue: e.target.value}));
+			editorActions.dispatch(new EntityGraphicUpdateCommand({graphicalId, field: 'color', newValue: e.target.value}));
 		});
 
 		props.querySelectorAll('.attr-enable').forEach(checkbox => {
@@ -534,7 +534,7 @@ class EntityEditorWidget {
 				const valType = attr ? attr.type : (ent.attrs[attrId]?.type || 'single');
 				if (e.target.checked) {
 					valInput.disabled = false;
-					actions.dispatch(new EntityAttributeUpdateCommand({
+					editorActions.dispatch(new EntityAttributeUpdateCommand({
 						category: this.activeCategory,
 						id,
 						attrId,
@@ -543,7 +543,7 @@ class EntityEditorWidget {
 					}));
 				} else {
 					valInput.disabled = true;
-					actions.dispatch(new EntityAttributeUpdateCommand({
+					editorActions.dispatch(new EntityAttributeUpdateCommand({
 						category: this.activeCategory,
 						id,
 						attrId,
@@ -558,7 +558,7 @@ class EntityEditorWidget {
 			input.addEventListener('change', (e) => {
 				const attrId = e.target.dataset.attrId;
 				const valType = e.target.dataset.attrType;
-				actions.dispatch(new EntityAttributeUpdateCommand({
+				editorActions.dispatch(new EntityAttributeUpdateCommand({
 					category: this.activeCategory,
 					id,
 					attrId,

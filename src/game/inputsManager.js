@@ -1,36 +1,22 @@
-import { globalStore } from "../globalStore.js";
-import {commandsManager, getCommandFromKey} from "./commands.js";
-import {gui} from "../gui.js";
+import {getCommandFromKey} from "./commands.js";
 import {config} from "../config.js";
-import {GuiEvents} from "../editor/editorEvents.js";
 
 const InputsManagerConfig = Object.freeze({
 	KEY_REPEAT_DELAY:  "KEY_REPEAT_DELAY",
 });
 
-class InputsManager {
+config.addConfigVar(InputsManagerConfig.KEY_REPEAT_DELAY, 200, "Time in milliseconds to wait before another key press is registered, while holding down a key", 'keyRepeatDelay', 'InputsManagerConfig');
+
+export class InputsManager {
 	#keyboardEnabled = false;
 	#heldKeys = new Map();
+	/**@type {CommandsManager}*/ #commandsManager;
 
-	constructor() {
-		gui.on(GuiEvents.SHOW_GAME, (enabled) => this.setKeyboardEnabled(enabled));
-
-		config.addConfigVar(InputsManagerConfig.KEY_REPEAT_DELAY, 200, "Time in milliseconds to wait before another key press is registered, while holding down a key");
+	constructor(commandsManager) {
+		this.#commandsManager = commandsManager;
 	}
-// ...
 
 	init() {
-		this.#attachListeners();
-	}
-
-	#attachListeners() {
-		window.addEventListener("keydown", (e) => {
-			inputsManager.keyDown(e.key);
-		});
-
-		window.addEventListener("keyup", (e) => {
-			inputsManager.keyUp(e.key);
-		});
 	}
 
 	keyDown(key) {
@@ -53,15 +39,12 @@ class InputsManager {
 	handleKeyboard(currentTime) {
 		if (!this.#keyboardEnabled || this.#heldKeys.size === 0) return;
 
-		const player = globalStore.state.gameSession?.player;
-		if (!player) return;
-
 		const delay = config.getConfigValue(InputsManagerConfig.KEY_REPEAT_DELAY);
 
 		this.#heldKeys.forEach((state, command) => {
 			if (currentTime - state.lastProcessed >= delay) {
 				state.lastProcessed = currentTime;
-				commandsManager.applyCommand(command, { entity: player, time: currentTime });
+				this.#commandsManager.applyCommand(command); // time: currentTime
 			}
 		});
 	}
@@ -73,5 +56,3 @@ class InputsManager {
 		}
 	}
 }
-
-export const inputsManager = new InputsManager();

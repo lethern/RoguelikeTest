@@ -3,8 +3,6 @@ import {config} from "./config.js";
 import {CryptoRandom} from './utils/random.js';
 
 export function initAll() {
-	// config
-	config.addConfigVar('mapEditor.tileSize', 16, 'Size of each rendered map tile in pixels', 'tileSize');
 
 	// globalStore state
 	globalStore.state.gameSession = {
@@ -31,7 +29,8 @@ export function initAll() {
 		'tile_wall': {
 			id: 'tile_wall',
 			name: 'Wall',
-			passable: false,
+			blocksMovement: true,
+			blocksVision: true,
 			defaultSpawns: [],
 			flags: {},
 			tags: ['wall', 'solid'],
@@ -40,7 +39,8 @@ export function initAll() {
 		'tile_floor': {
 			id: 'tile_floor',
 			name: 'Floor',
-			passable: true,
+			blocksMovement: false,
+			blocksVision: false,
 			defaultSpawns: [],
 			flags: {},
 			tags: ['floor', 'walkable'],
@@ -49,7 +49,8 @@ export function initAll() {
 		'tile_grass': {
 			id: 'tile_grass',
 			name: 'Grass',
-			passable: true,
+			blocksMovement: false,
+			blocksVision: false,
 			defaultSpawns: [],
 			flags: {},
 			tags: ['grass', 'walkable'],
@@ -58,7 +59,8 @@ export function initAll() {
 		'tile_water': {
 			id: 'tile_water',
 			name: 'Water',
-			passable: false,
+			blocksMovement: true,
+			blocksVision: false,
 			defaultSpawns: [],
 			flags: {},
 			tags: ['water', 'liquid'],

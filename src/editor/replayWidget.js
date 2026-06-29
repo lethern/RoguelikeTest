@@ -1,6 +1,6 @@
 import { gui } from '../gui.js';
-import {actions} from '../historyStorage.js';
-import {HistoryEvents} from "./editorEvents.js";
+import {editorActions} from './actionsManager.js';
+import {EditorActionsEvents} from "./editorEvents.js";
 
 class ReplayDevWidget {
 	constructor() {
@@ -35,10 +35,10 @@ class ReplayDevWidget {
 			this.render();
 		});
 
-		actions.on(HistoryEvents.COMMAND_ADDED, () => this.render());
-		actions.on(HistoryEvents.STEP_BACK, () => this.render());
-		actions.on(HistoryEvents.STEP_FORWARD, () => this.render());
-		actions.on(HistoryEvents.HISTORY_REPLACED, () => this.render());
+		editorActions.on(EditorActionsEvents.COMMAND_ADDED, () => this.render());
+		editorActions.on(EditorActionsEvents.STEP_BACK, () => this.render());
+		editorActions.on(EditorActionsEvents.STEP_FORWARD, () => this.render());
+		editorActions.on(EditorActionsEvents.HISTORY_REPLACED, () => this.render());
 	}
 
 	selectNode(seqN) {
@@ -46,7 +46,7 @@ class ReplayDevWidget {
 			this.selectedNode = null;
 		} else {
 			const nodes = [];
-			let curr = actions.getHistoryRoot();
+			let curr = editorActions.getHistoryRoot();
 			while (curr) {
 				nodes.push(curr);
 				curr = curr.getLatestChild();
@@ -60,14 +60,14 @@ class ReplayDevWidget {
 		if (!this.element) return;
 
 		const nodes = [];
-		let curr = actions.getHistoryRoot();
+		let curr = editorActions.getHistoryRoot();
 
 		while (curr) {
 			nodes.push(curr);
 			curr = curr.getLatestChild();
 		}
 
-		const activeNode = actions.getCurrentNode();
+		const activeNode = editorActions.getCurrentNode();
 		let totalSize = 0;
 
 		const listHtml = nodes.map((node) => {

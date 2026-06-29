@@ -1,5 +1,5 @@
-import {persistenceManager} from './persistenceManager.js';
-import {PersistenceEvents} from "./editor/editorEvents.js";
+import {editorPersistenceManager} from './editor/persistenceManager.js';
+import {EditorPersistenceEvents} from "./editor/editorEvents.js";
 
 export const GameStateKeys = {
 	AttributesConfig: "AttributesConfig",
@@ -22,7 +22,7 @@ export const GameStateKeys = {
  *
  * @property {Object.<string, {id: string, name: string, width: number, height: number, tiles: any}>} maps
  * @property {Object.<string, Array.<{x: number, y: number, entityId: string}>>} mapEntities
- * @property {Object.<string, {id: string, name: string, passable: boolean, defaultSpawns: any, flags: any, tags: any, graphicalId: string}>} tileDictionary
+ * @property {Object.<string, {id: string, name: string, blocksMovement: boolean, blocksVision: boolean, defaultSpawns: any, flags: any, tags: any, graphicalId: string}>} tileDictionary
  * @property {Object.<string, {char: string, color: string}>} graphicalTiles
  * @property {Object.<string, {char: string, color: string}>} graphicalEntities
  * @property {{currMapId: string|null}} editor
@@ -41,7 +41,7 @@ class GlobalStore {
 			// map
 			maps: {}, // maps[id] -> id, name, width, height, tiles
 			mapEntities: {}, // mapEntities[mapId] -> array of {x, y, entityId}
-			tileDictionary: {}, // [id] -> id, name, passable, defaultSpawns, flags, tags, graphicalId
+			tileDictionary: {}, // [id] -> id, name, blocksMovement, blocksVision, defaultSpawns, flags, tags, graphicalId
 			graphicalTiles: {}, // [name] -> char, color
 			graphicalEntities: {}, // [id] -> char, color
 			editor: {}, // {currMapId}
@@ -53,14 +53,18 @@ class GlobalStore {
 	}
 
 	#initPersistence() {
-		persistenceManager.on(PersistenceEvents.SAVE, (components) => {
+		const saveFn = (components) => {
 			components.globalStore = this.state;
-		});
-		persistenceManager.on(PersistenceEvents.LOAD, (components) => {
+		};
+		const loadFn = (components) => {
 			if (components.globalStore) {
 				this.setState(components.globalStore);
 			}
-		});
+		};
+		editorPersistenceManager.on(EditorPersistenceEvents.SAVE_LOCAL, saveFn);
+		editorPersistenceManager.on(EditorPersistenceEvents.SAVE_DISK, saveFn);
+		editorPersistenceManager.on(EditorPersistenceEvents.LOAD_LOCAL, loadFn);
+		editorPersistenceManager.on(EditorPersistenceEvents.LOAD_DISK, loadFn);
 	}
 
 	/**

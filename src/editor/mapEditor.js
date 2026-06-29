@@ -1,10 +1,15 @@
 import {gui} from "../gui.js";
-import {BaseCommand, commandRegistry} from '../historyNode.js';
-import {actions} from '../historyStorage.js';
+import {BaseCommand, commandRegistry} from './historyNode.js';
+import {editorActions} from './actionsManager.js';
 import {GameStateKeys, globalStore} from "../globalStore.js";
 import {config} from "../config.js";
 import {CryptoRandom} from '../utils/random.js';
 import {editorEvents, EditorEvents} from './editorEvents.js';
+
+const MapEditorConfig = Object.freeze({
+	MAP_EDITOR_TILE_SIZE: "MAP_EDITOR_TILE_SIZE",
+});
+config.addConfigVar(MapEditorConfig.MAP_EDITOR_TILE_SIZE, 16, 'Size of each rendered map tile in pixels', 'tileSize', 'MapEditorConfig');
 
 //#region commands
 function expandHex(hex) {
@@ -48,7 +53,8 @@ class TileEntryAddCommand extends BaseCommand {
 		globalStore.state.tileDictionary[this.data.id] = {
 			id: this.data.id,
 			name: this.data.name,
-			passable: this.data.passable || false,
+			blocksMovement: this.data.blocksMovement || false,
+			blocksVision: this.data.blocksVision || false,
 			defaultSpawns: this.data.defaultSpawns || [],
 			flags: this.data.flags || {},
 			tags: this.data.tags || [],
@@ -98,18 +104,58 @@ class MapPaintEntityCommand extends BaseCommand {
 	constructor(data) {
 		super(data);
 	}
-	execute() {
+
+	canAppend(baseConfig, maxItems) {
+		return this.data.mapId === baseConfig.mapId &&
+			this.data.entityId === baseConfig.entityId &&
+			this.data.paints.length < maxItems;
+	}
+
+	appendAndExecute(paintItem) {
 		const arr = globalStore.state.mapEntities[this.data.mapId];
-		const idx = arr.findIndex(e => e.x === this.data.x && e.y === this.data.y && e.entityId === this.data.entityId);
+		const idx = arr.findIndex(e => e.x === paintItem.x && e.y === paintItem.y && e.entityId === this.data.entityId);
+
 		if (idx > -1) {
 			arr.splice(idx, 1);
+			paintItem.wasAdded = false;
 		} else {
-			arr.push({ x: this.data.x, y: this.data.y, entityId: this.data.entityId });
+			arr.push({ x: paintItem.x, y: paintItem.y, entityId: this.data.entityId });
+			paintItem.wasAdded = true;
+		}
+
+		this.data.paints.push(paintItem);
+		globalStore.notify(GameStateKeys.MapEntities);
+	}
+
+	execute() {
+		const arr = globalStore.state.mapEntities[this.data.mapId];
+
+		for (const p of this.data.paints) {
+			const idx = arr.findIndex(e => e.x === p.x && e.y === p.y && e.entityId === this.data.entityId);
+			if (idx > -1) {
+				arr.splice(idx, 1);
+				p.wasAdded = false;
+			} else {
+				arr.push({ x: p.x, y: p.y, entityId: this.data.entityId });
+				p.wasAdded = true;
+			}
 		}
 		globalStore.notify(GameStateKeys.MapEntities);
 	}
+
 	undo() {
-		this.execute();
+		const arr = globalStore.state.mapEntities[this.data.mapId];
+
+		for (let i = this.data.paints.length - 1; i >= 0; i--) {
+			const p = this.data.paints[i];
+			if (p.wasAdded) {
+				const idx = arr.findIndex(e => e.x === p.x && e.y === p.y && e.entityId === this.data.entityId);
+				if (idx > -1) arr.splice(idx, 1);
+			} else {
+				arr.push({ x: p.x, y: p.y, entityId: this.data.entityId });
+			}
+		}
+		globalStore.notify(GameStateKeys.MapEntities);
 	}
 }
 commandRegistry.register(MapPaintEntityCommand);
@@ -117,29 +163,48 @@ commandRegistry.register(MapPaintEntityCommand);
 class MapPaintTileCommand extends BaseCommand {
 	static friendlyName = 'Paint Tile';
 	constructor(data) {
-		if (data.oldValue === undefined) {
-			const map = globalStore.state.maps[data.mapId];
-			if (map) {
-				data.oldValue = map.tiles[data.y]?.[data.x] ?? null;
-			} else {
-				data.oldValue = null;
-			}
-		}
 		super(data);
 	}
-	execute() {
+
+	canAppend(baseConfig, maxItems) {
+		return this.data.mapId === baseConfig.mapId &&
+			this.data.tileId === baseConfig.tileId &&
+			this.data.paints.length < maxItems;
+	}
+
+	appendAndExecute(paintItem) {
+		this.data.paints.push(paintItem);
+
 		const map = globalStore.state.maps[this.data.mapId];
-		if (map && map.tiles[this.data.y] && this.data.x < map.width) {
-			map.tiles[this.data.y][this.data.x] = this.data.tileId;
+		if (map && map.tiles[paintItem.y] && paintItem.x < map.width) {
+			map.tiles[paintItem.y][paintItem.x] = this.data.tileId;
 			globalStore.notify(GameStateKeys.Maps);
 		}
 	}
+
+	execute() {
+		const map = globalStore.state.maps[this.data.mapId];
+		if (!map) return;
+
+		for (const p of this.data.paints) {
+			if (map.tiles[p.y] && p.x < map.width) {
+				map.tiles[p.y][p.x] = this.data.tileId;
+			}
+		}
+		globalStore.notify(GameStateKeys.Maps);
+	}
+
 	undo() {
 		const map = globalStore.state.maps[this.data.mapId];
-		if (map && map.tiles[this.data.y]) {
-			map.tiles[this.data.y][this.data.x] = this.data.oldValue;
-			globalStore.notify(GameStateKeys.Maps);
+		if (!map) return;
+
+		for (let i = this.data.paints.length - 1; i >= 0; i--) {
+			const p = this.data.paints[i];
+			if (map.tiles[p.y] && p.x < map.width) {
+				map.tiles[p.y][p.x] = p.oldValue;
+			}
 		}
+		globalStore.notify(GameStateKeys.Maps);
 	}
 }
 commandRegistry.register(MapPaintTileCommand);
@@ -321,7 +386,7 @@ class TileDictionaryWidget {
 
 		this.rootElement.querySelector('#btnCreate').addEventListener('click', () => {
 			const id = 'tile_' + Date.now();
-			actions.dispatch(new TileEntryAddCommand({id: id, name: 'New Tile'}));
+			editorActions.dispatch(new TileEntryAddCommand({id: id, name: 'New Tile'}));
 		});
 
 		this.rootElement.querySelector('#searchName').addEventListener('input', () => this.refreshList());
@@ -443,32 +508,37 @@ class TileDictionaryWidget {
 
 		props.innerHTML = `
 			<div><label>Name: <input type="text" id="propName" value="${tile.name}"></label></div>
-			<div><label>Passable: <input type="checkbox" id="propPassable" ${tile.passable ? 'checked' : ''}></label></div>
+			<div><label>Blocks Movement: <input type="checkbox" id="propBlocksMovement" ${tile.blocksMovement ? 'checked' : ''}></label></div>
+			<div><label>Blocks Vision: <input type="checkbox" id="propBlocksVision" ${tile.blocksVision ? 'checked' : ''}></label></div>
 			<div><label>Tags (comma separated): <input type="text" id="propTags" value="${tile.tags.join(', ')}"></label></div>
 			<div><label>Char (1-char): <input type="text" id="propChar" maxlength="1" value="${gTile.char}" style="width: 30px; text-align: center;"></label></div>
 			<div><label>Color: <input type="color" id="propColor" value="${gTile.color.length === 4 ? expandHex(gTile.color) : gTile.color}"></label></div>
 		`;
 
 		props.querySelector('#propName').addEventListener('change', (e) => {
-			actions.dispatch(new TileEntryUpdateCommand({id, field: 'name', newValue: e.target.value}));
+			editorActions.dispatch(new TileEntryUpdateCommand({id, field: 'name', newValue: e.target.value}));
 		});
 
-		props.querySelector('#propPassable').addEventListener('change', (e) => {
-			actions.dispatch(new TileEntryUpdateCommand({id, field: 'passable', newValue: e.target.checked}));
+		props.querySelector('#propBlocksMovement').addEventListener('change', (e) => {
+			editorActions.dispatch(new TileEntryUpdateCommand({id, field: 'blocksMovement', newValue: e.target.checked}));
+		});
+
+		props.querySelector('#propBlocksVision').addEventListener('change', (e) => {
+			editorActions.dispatch(new TileEntryUpdateCommand({id, field: 'blocksVision', newValue: e.target.checked}));
 		});
 
 		props.querySelector('#propTags').addEventListener('change', (e) => {
 			const newTags = e.target.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
-			actions.dispatch(new TileEntryUpdateCommand({id, field: 'tags', newValue: newTags}));
+			editorActions.dispatch(new TileEntryUpdateCommand({id, field: 'tags', newValue: newTags}));
 		});
 
 		props.querySelector('#propChar').addEventListener('change', (e) => {
 			const val = e.target.value || '?';
-			actions.dispatch(new TileGraphicUpdateCommand({graphicalId, field: 'char', newValue: val}));
+			editorActions.dispatch(new TileGraphicUpdateCommand({graphicalId, field: 'char', newValue: val}));
 		});
 
 		props.querySelector('#propColor').addEventListener('change', (e) => {
-			actions.dispatch(new TileGraphicUpdateCommand({graphicalId, field: 'color', newValue: e.target.value}));
+			editorActions.dispatch(new TileGraphicUpdateCommand({graphicalId, field: 'color', newValue: e.target.value}));
 		});
 
 		this.drawCanvas(graphicalId);
@@ -550,7 +620,7 @@ class MapPropertiesComponent {
 		this.rootElement.querySelector('#mapName').addEventListener('change', (e) => {
 			const map = this.getCurrentMap();
 			if (map) {
-				actions.dispatch(new MapUpdateCommand({mapId: map.id, field: 'name', newValue: e.target.value}));
+				editorActions.dispatch(new MapUpdateCommand({mapId: map.id, field: 'name', newValue: e.target.value}));
 			}
 		});
 
@@ -559,7 +629,7 @@ class MapPropertiesComponent {
 			if (map) {
 				const newWidth = parseInt(e.target.value, 10);
 				const newHeight = map.height;
-				actions.dispatch(new MapResizeCommand({mapId: map.id, newWidth, newHeight}));
+				editorActions.dispatch(new MapResizeCommand({mapId: map.id, newWidth, newHeight}));
 			}
 		});
 
@@ -568,19 +638,19 @@ class MapPropertiesComponent {
 			if (map) {
 				const newWidth = map.width;
 				const newHeight = parseInt(e.target.value, 10);
-				actions.dispatch(new MapResizeCommand({mapId: map.id, newWidth, newHeight}));
+				editorActions.dispatch(new MapResizeCommand({mapId: map.id, newWidth, newHeight}));
 			}
 		});
 
 		this.rootElement.querySelector('#btnNewMap').addEventListener('click', () => {
 			const newMapId = CryptoRandom.generateId();
-			actions.dispatch(new MapCreateCommand({
+			editorActions.dispatch(new MapCreateCommand({
 				mapId: newMapId,
 				name: 'New Map',
 				width: 40,
 				height: 25
 			}));
-			actions.dispatch(new MapSwitchCommand({mapId: newMapId}));
+			editorActions.dispatch(new MapSwitchCommand({mapId: newMapId}));
 		});
 
 		this.rootElement.querySelector('#btnOpenMap').addEventListener('click', () => this.renderMapListUI());
@@ -625,7 +695,7 @@ class MapPropertiesComponent {
 				item.querySelector('.btnOpen').addEventListener('click', (e) => {
 					e.stopPropagation();
 					if (map.id !== currId) {
-						actions.dispatch(new MapSwitchCommand({mapId: map.id}));
+						editorActions.dispatch(new MapSwitchCommand({mapId: map.id}));
 						this.renderEditUI();
 					}
 				});
@@ -1005,7 +1075,7 @@ class MapRendererComponent {
 
 	getTileSize() {
 		try {
-			return config.getConfigValue('mapEditor.tileSize');
+			return config.getConfigValue(MapEditorConfig.MAP_EDITOR_TILE_SIZE);
 		} catch {
 			return 16;
 		}
@@ -1095,25 +1165,28 @@ class MapRendererComponent {
 		if (!map || x < 0 || x >= map.width || y < 0 || y >= map.height) return;
 
 		const brushType = brushPanelComponent.activeBrushType;
+
 		if (brushType === 'entity') {
 			const activeEntity = brushPanelComponent.selectedEntity;
 			if (activeEntity) {
-				actions.dispatch(new MapPaintEntityCommand({
-					mapId: map.id,
-					x: x,
-					y: y,
-					entityId: activeEntity.entityId
-				}));
+				editorActions.dispatchOrAppend(
+					MapPaintEntityCommand,
+					{ mapId: map.id, entityId: activeEntity.entityId },
+					{ x, y },
+					10
+				);
 			}
 		} else {
 			const tileId = brushPanelComponent.getSelectedTile() ?? null;
 			if (map.tiles[y][x] !== tileId) {
-				actions.dispatch(new MapPaintTileCommand({
-					mapId: map.id,
-					x: x,
-					y: y,
-					tileId: tileId
-				}));
+				const oldValue = map.tiles[y][x] ?? null;
+
+				editorActions.dispatchOrAppend(
+					MapPaintTileCommand,
+					{ mapId: map.id, tileId: tileId },
+					{ x, y, oldValue },
+					10
+				);
 			}
 		}
 	}
@@ -1250,19 +1323,19 @@ function initMapEditor() {
 		});
 	});
 
-	gui.registerComponent('TileDictionary', 'Tile Dictionary', null, (container, state) => {
+	gui.registerComponent('TileDictionary', 'Map tiles', null, (container, state) => {
 		tileDictionaryWidget.init(container);
 	});
 
-	gui.registerComponent('MapProperties', 'Map Properties', null, (container, state) => {
+	gui.registerComponent('MapProperties', 'Map properties', null, (container, state) => {
 		mapPropertiesComponent.init(container);
 	});
 
-	gui.registerComponent('BrushPanel', 'Brush Panel', null, (container, state) => {
+	gui.registerComponent('BrushPanel', 'Brush', null, (container, state) => {
 		brushPanelComponent.init(container);
 	});
 
-	gui.registerComponent('Renderer', 'Map View', null, (container, state) => {
+	gui.registerComponent('Renderer', 'Map view', null, (container, state) => {
 		mapRendererComponent.init(container);
 	});
 }
