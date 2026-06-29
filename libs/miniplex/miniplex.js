@@ -1,3 +1,4 @@
+// based on https://github.com/hmans/miniplex
 import {Bucket, OrderedBucket} from "./miniplex-bucket.js";
 
 //import { id } from "./hmans-id.esm.js";

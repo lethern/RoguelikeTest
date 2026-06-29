@@ -1,3 +1,4 @@
+// based on https://github.com/hmans/eventery
 export class Event {
   constructor() {
     this.subscribers = new Set();

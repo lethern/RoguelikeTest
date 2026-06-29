@@ -1,3 +1,4 @@
+// based on https://github.com/hmans/miniplex
 import { Event } from "./eventery.js";
 
 /**
